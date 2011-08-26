@@ -1,0 +1,245 @@
+;; authors: noah goodman (with help from jeff siskind, andreas stuhlmuller)
+
+;;this is the church xrp-preamble, that creates all standard xrps. some primitive pieces (samplers, scorers) are added in the scheme header.
+
+;;for constructing 'erp-like' xrps that don't have any hyperparams or stats.
+(define (make-stateless-xrp xrp-name sampler scorer . proposal-support)
+  (make-xrp xrp-name
+            (lambda (stats hyperparams args) ;;sample
+              (let* ((value (apply sampler args))
+                     (value (if (and (*with-score-gradient*) (continuous? value)) (tapify (untapify value)) value)))
+                (list value stats (scorer args value))))
+            (lambda (value stats hyperparams args) ;;incr-stats
+              (let ((value (if (and (*with-score-gradient*) (continuous? value)) (tapify (untapify value)) value)))
+                (list value stats (scorer args value))))
+            (lambda (value stats hyperparams args) ;;decr-stats
+              (let ((value (if (and (*with-score-gradient*) (continuous? value)) (tapify (untapify value)) value)))
+                (list value stats (scorer args value))))
+            'scorer;;FIXME
+            '() ;;init-stats
+            '() ;;hyperparams
+            (if (null? proposal-support) '() (first proposal-support))
+            (if (null? proposal-support) '() (if (null? (rest proposal-support))
+                                                 '()
+                                                 (let ((pr (second proposal-support))) (lambda (stats hyperparams args) (pr args)))))))
+
+(define flip (make-stateless-xrp 'flip
+                                 (lambda w  (if (null? w)
+                                                (< (random-real) 0.5)
+                                                (< (random-real) (car w)) ))
+                                 (lambda (args val)
+                                   (if (null? args)
+                                       (- (log 2.0))
+                                       (if val
+                                           (log (first args))
+                                           (log (- 1 (first args))) )))
+                                 '() ;proposer
+                                 (lambda (args) (list true false)) ;;FIXME: check if prob is 0 or 1.
+                                 ))
+
+(define log-flip (make-stateless-xrp 'log-flip
+                                     (lambda w (if (null? w)
+                                                   (< (random-real) 0.5)
+                                                   (< (log (random-real)) (car w))))
+                                     (lambda (args val)
+                                       (if (null? args)
+                                           (- (log 2.0))
+                                           (if val
+                                               (first args)
+                                               (log (- 1.0 (exp (first args)))) )))))
+
+(define dirichlet (make-stateless-xrp 'dirichlet sample-dirichlet
+                                      (lambda (args val)
+                                        (dirichlet-lnpdf (first args) val))
+                                      ))
+
+(define sample-discrete (make-stateless-xrp 'sample-discrete
+                                            discrete-sampler
+                                            (lambda (args val)
+                                              (if (>= val (length (first args)))
+                                                  -inf.0
+                                                  (let ((p (discrete-pdf (first args) val)))
+                                                    (if (> p 0) (log p) -inf.0))))
+                                            '() ;;proposer
+                                            (lambda (args) (iota (length (first args))))
+                                            ))
+
+(define sample-integer (make-stateless-xrp 'sample-integer
+                                           random-integer
+                                           (lambda (args val)
+                                             (let ((n (first args)))
+                                               (if (and (integer? val)
+                                                        (>= val 0)
+                                                        (< val n))
+                                                   (- (log n))
+                                                   -inf.0)))
+                                           '();;proposer
+                                           (lambda (args) (iota (first args)))
+                                           ))
+
+(define uniform (make-stateless-xrp 'uniform
+                                    (lambda (a b) (+ (* (- b a) (random-real)) a))
+                                    (lambda (args val)
+                                      (let ((a (first args))
+                                            (b (second args)) )
+                                        (if (or (< val a)
+                                                (> val b))
+                                            -inf.0
+                                            (- (log (- b a))) )))))
+
+(define exponential (make-stateless-xrp 'exponential
+                                        (lambda (inv-mean)
+                                          (- (/ (log (random-real)) inv-mean)) )
+                                        (lambda (args val) ;; returns density
+                                          (if (< val 0)
+                                              -inf.0
+                                              (let ((inv-mean (first args)))
+                                                (+ (log inv-mean) (- (* inv-mean val))) )))))
+
+(define gaussian (make-stateless-xrp 'gaussian
+                                     (lambda args (sample-gaussian (first args) (second args)))
+                                     (lambda (args val) (gaussian-lnpdf val (first args) (second args)))))
+
+(define gensym (make-stateless-xrp 'gensym
+                                   (lambda prefix (apply scheme-gensym prefix))
+                                   (lambda (args val) (log 0.9)))) ;;FIXME!! gensym should be sad if two draws with different addresses are eq?
+
+;;;permutations
+(define random-permutation (make-stateless-xrp 'random-permutation
+                                               (lambda (len)
+                                                 ;; implements fisher-yates-knuth
+                                                 (let loop ((perm (iota len))
+                                                            (n (- len 1)))
+                                                   (if (= n 0)
+                                                       perm
+                                                       (let ((k (sample-integer (+ n 1))))
+                                                         (loop (put (put perm k (list-ref perm n)) n (list-ref perm k))
+                                                               (- n 1))))))
+                                               (lambda (args val)
+                                                 (let ((len (first args)))
+                                                   (if (= len (length val)) ;; only a weak sanity check
+                                                       (- (lnfact len))
+                                                       (log 0) )))))
+(define (put lst ind elt) (append (take lst ind) (list elt) (drop lst (+ 1 ind)))) ;;Oh, so slow!
+
+(define (permute lst) (map (lambda (ind) (list-ref lst ind)) (random-permutation (length lst))))
+
+(define (make-dirichlet-discrete hyp) (make-xrp 'dirichlet-discrete 
+                                                (lambda (stats hyperparams args) ;;sampler
+                                                  (let* ((counts (map + stats hyperparams))
+                                                         (total-counts (apply + counts))
+                                                         (probs (map (lambda (c) (/ c total-counts)) counts))
+                                                         (value (sample-discrete probs))
+                                                         (new-stats (append (take stats value)
+                                                                            (list (+ 1 (list-ref stats value)))
+                                                                            (drop stats (+ 1 value)))))
+                                                    (list value new-stats (log (list-ref probs value)))))
+                                                (lambda (value stats hyperparams args) ;;incr-stats
+                                                  (list value
+                                                        (append (take stats value)
+                                                                (list (+ (list-ref stats value) 1))
+                                                                (drop stats (+ 1 value)))
+                                                        (- (log (+ (list-ref stats value) (list-ref hyperparams value)))
+                                                           (log (+ (apply + stats) (apply + hyperparams))))))
+                                                (lambda (value stats hyperparams args) ;;decr-stats
+                                                  (list value
+                                                        (append (take stats value)
+                                                                (list (- (list-ref stats value) 1))
+                                                                (drop stats (+ 1 value)))
+                                                        (+ (log (+ -1 (list-ref stats value) (list-ref hyperparams value)))
+                                                           (- (log (+ -1 (apply + stats) (apply + hyperparams)))))))
+                                                'dirichlet-discrete-scorer  ;;FIXME. this isn't currently used, but may be for incremental method (on hyperparams change).
+                                                (make-list (length hyp) 0.0)
+                                                hyp
+                                                '();dirichlet-discrete-uniform-proposer
+                                                (lambda (stats hyperparams args) (iota (length hyperparams))) ;;support -- doesn't handle zero prob entries.
+                                                ))
+
+(define (make-beta-binomial alpha beta)
+  (let ((dd (make-dirichlet-discrete (list alpha beta))))
+    (lambda () (= (dd) 1))))
+
+(define (make-symmetric-dirichlet-discrete N hyp) (make-dirichlet-discrete (make-list N hyp)))
+
+(define (make-CRP alpha) (make-xrp 'CRP
+                                   (lambda (stats hyperparam args) ;;sampler
+                                     (let* ((count-map stats)
+                                            (counts (pair hyperparam (map rest count-map)))
+                                            (total-counts (apply + counts))
+                                            (probs (map (lambda (c) (/ c total-counts)) counts))
+                                            (table-index (sample-discrete probs)))
+                                       (if (= table-index 0)
+                                           ;;this customer sits at a new table:
+                                           (let* ((table-symbol (gensym));(make-table-label))
+                                                  (new-count-map ;(sort-stats
+                                                                  (pair (pair table-symbol 1) count-map)))
+                                             (list table-symbol
+                                                   new-count-map
+                                                   (list-ref probs table-index) ))
+                                           ;;this customer sits at an existing table:
+                                           (let* ((table-symbol (first (list-ref count-map (- table-index 1))))
+                                                  (table-count (+ 1 (rest (list-ref count-map (- table-index 1)))))
+                                                  (new-count-map ;(sort-stats
+                                                                  (append (take count-map (- table-index 1))
+                                                                          (list (pair table-symbol table-count))
+                                                                          (drop count-map table-index))))
+                                             (list table-symbol
+                                                   new-count-map
+                                                   (list-ref probs table-index)))
+                                           )))
+                                   (lambda (value stats hyperparam args) ;;incr-stats
+                                     (let* ((count-map stats)
+                                            (counts (pair hyperparam (map rest count-map)))
+                                            (total-counts (apply + counts))
+                                            (probs (map (lambda (c) (/ c total-counts)) counts))
+                                            (table-index (list-index (lambda (c) (eq? value (first c))) count-map)))
+                                       (if (eq? false table-index)
+                                           ;;this value is a new table:
+                                           (list value
+                                                 ;(sort-stats
+                                                  (pair (pair value 1) count-map)
+                                                 (list-ref probs 0))
+                                           ;;this value is an existing table:
+                                           (let* ((table-count (rest (list-ref count-map table-index)))
+                                                  (new-table-count (+ table-count 1))
+                                                  (new-count-map ;(sort-stats
+                                                                  (append (take count-map table-index)
+                                                                          (list (pair value new-table-count))
+                                                                          (drop count-map (+ 1 table-index)))))
+                                             (list value
+                                                   new-count-map
+                                                   (list-ref probs table-index)) ))))
+                                   (lambda (value stats hyperparam args) ;;decr-stats
+                                     (let* ((count-map stats)
+                                            (counts (map rest count-map))
+                                            (table-index (list-index (lambda (c) (eq? value (first c))) count-map)))
+                                       (if (eq? false table-index)
+                                           ;;this value not found, can't decr it:
+                                           (error table-index "can't decr a value from CRP that doesn't label any table!")
+                                           ;;this value is an existing table:
+                                           (let* ((table-count (rest (list-ref count-map table-index)))
+                                                  (new-table-count (- table-count 1))
+                                                  (new-count-map ;(sort-stats
+                                                                  (if (= 0 new-table-count)
+                                                                      (append (take count-map table-index)
+                                                                              (drop count-map (+ 1 table-index)))
+                                                                      (append (take count-map table-index)
+                                                                              (list (pair value new-table-count))
+                                                                              (drop count-map (+ 1 table-index))))))
+                                             (list value
+                                                   new-count-map
+                                                   (if (= 0 new-table-count)
+                                                       (/ hyperparam (+ hyperparam (apply + counts) (- 1)))
+                                                       (/ new-table-count (+ hyperparam (apply + counts) (- 1)))))))))
+                                   'CRP-scorer
+                                   '()
+                                   alpha
+                                   '();CRP-uniform-proposer
+                                   '();CRP-support
+                                   ))
+
+;;this is a version of DPmem using the crp representation:
+(define (DPmem alpha proc)
+  (let ((augmented-proc (mem (lambda (args part) (apply proc args))))
+        (crps (mem (lambda (args) (make-CRP alpha)))))
+    (lambda argsin (augmented-proc argsin ((crps argsin))))))

@@ -1,0 +1,416 @@
+;;this file contains all of the mcmc code that doesn't mess with states -- ie all of the stuff at the level of kernels and above.
+
+;;what must be provided elsewhere:
+;;counterfactual-update
+;;structure handling: mcmc-state->xrp-draws, mcmc-state->score, mcmc-state->query-value.
+
+;;NOTE: since these are church procedures, the xrp-list will accumulate draws due to accept/reject decisions and proposals. will this cause bad slowdown?
+
+;;;kernels (mcmc transition distributions) and proposal distributions
+
+(define (proposable-xrps state proposable?)
+  (filter-map (lambda (v) (if (proposable? (rest v)) (rest v) #f))
+              (addbox->alist (mcmc-state->xrp-draws state))))
+
+(define (selective-proposal-distribution state normal-form-proc proposable?)
+  (if (addbox-empty? (mcmc-state->xrp-draws state))
+      (list 0.0 state) ;; if no xrps have been drawn (eg all randomness in q-e) make trivial proposal. (still have to update..??)
+      (let ((proposal-xrps (proposable-xrps state proposable?)))
+        (if (null? proposal-xrps)
+            (list 0.0 state)
+            (let* ((chosen-xrp (uniform-draw proposal-xrps)) ;; xrp-draws is an addbox, so address is first.
+                   (ret1 ((xrp-draw-proposer chosen-xrp) state))
+                   (proposed-val (first ret1))
+                   (proposal-fw-score (second ret1))
+                   (proposal-bw-score (third ret1))
+                   (ret2 (counterfactual-update state normal-form-proc (pair chosen-xrp proposed-val)))
+                   (proposal-state (first ret2))
+                   (cd-bw/fw (second ret2))
+                   (ind-fw (- (log (length proposal-xrps))))
+                   (ind-bw (- (log (length (proposable-xrps proposal-state proposable?))))))
+              (list (+ (- proposal-bw-score proposal-fw-score) cd-bw/fw (- ind-bw ind-fw)) proposal-state))))))
+
+(define (basic-proposal-distribution state normal-form-proc)
+  (selective-proposal-distribution state normal-form-proc (lambda (xrp-draw) true)))
+  
+;;FIXME!! this works badly... need constraint prop to do this right.
+(define (rejection-initializer normal-form-proc)
+  (let ((proposal-state (first (counterfactual-update (make-initial-mcmc-state) normal-form-proc)))) ;;don't care about bw/fw for init.
+    (if (= -inf.0 (mcmc-state->score proposal-state))
+        (rejection-initializer normal-form-proc)
+        proposal-state)))
+
+(define verbose-init #t)
+
+;; initialize using rejection on highest temp
+;; then for each temp from high to low:
+;; - rescore
+;; - do rejuvenation steps
+;; finally, check whether p != 0 (if 0, restart at top)
+(define (annealing-initializer rej-steps temps:low->high temps->nfqp . rejuv-kernel-builder)
+  (let* ([rejuv-kernel-builder (if (null? rejuv-kernel-builder) (lambda (nfqp) (basic-repeat-kernel rej-steps nfqp)) (first rejuv-kernel-builder))]
+         [temps:high->low (reverse temps:low->high)]
+         [normal-form-proc (apply temps->nfqp (first temps:high->low))]
+         [initial-state (begin (reset-store-xrp-draws)
+                               (rejection-initializer normal-form-proc))])
+    (let next-temp ([temps (rest temps:high->low)]
+                    [mcmc-state initial-state])
+      (if (= -inf.0 (mcmc-state->score mcmc-state))
+          (begin
+            (when verbose-init
+                  (display "annealing-initializer: failed, restarting at top ...\n"))
+            (annealing-initializer rej-steps temps:low->high temps->nfqp rejuv-kernel-builder))
+          (if (null? temps)
+              (begin
+                (when verbose-init
+                      (display "annealing-initializer: succeeded!\n"))
+                mcmc-state)
+              (begin
+                (when verbose-init
+                      (for-each display
+                                 (list "annealing-initializer:\n"
+                                       "  temps remaining: " (length temps)
+                                       "\n  current temp: " (first temps)
+                                      ;"\n  current val: " (untapify (mcmc-state->query-value mcmc-state))
+                                      "\n")))
+                (let* ([nfqp (apply temps->nfqp (first temps))]
+                       [rescored-state (first (counterfactual-update mcmc-state nfqp))]
+                       [kernel (rejuv-kernel-builder nfqp)]
+                       [rej-state (kernel rescored-state)])
+                  (next-temp (rest temps)
+                             rej-state))))))))
+
+
+;;basic MH kernel
+;;the proposal distribution takes a current state and returns a list of bw-fw score and proposed state.
+;;the scorer takes a state and returns the score.
+(define (make-mh-kernel proposal-distribution scorer)
+  (lambda (state)
+    (let* ((ret (proposal-distribution state))
+           (bw/fw (first ret))
+           (proposal-state (second ret))
+           (old-p (scorer state))
+           (new-p (scorer proposal-state))
+           (accept (log-flip (min 0.0 (+ (- new-p old-p) bw/fw))))
+           ;(dummy (if accept (display "--accept--\n") (display "--reject--\n")))
+           (dummy (reset-store-xrp-draws))) ;;FIXME!! this is to avoid accumulating xrp-draws...
+      (if accept
+          proposal-state
+          state))))
+
+;; ;; mixture kernel
+;; (define (mixture-kernel cdf . kernels )
+;;   (lambda (state)
+;;     (let ((u (uniform)))
+;;       (let loop ((kernels kernels)
+;;                  (cdf cdf) )
+;;         (if (<= u (car cdf))
+;;             ((car kernels) state)
+;;             (loop (cdr kernels)
+;;                   (cdr cdf) ))))))
+
+;; cycle kernel
+(define (cycle-kernel . kernels)
+  (lambda (state)
+    (fold (lambda (k s) (k s)) state kernels)))
+
+;; repeat a kernel
+(define (repeat-kernel steps kernel)
+  (apply cycle-kernel (make-list steps kernel)))
+
+(define (basic-repeat-kernel steps nfqp)
+  (repeat-kernel steps (make-mh-kernel (lambda (state) (basic-proposal-distribution state nfqp))
+                                       mcmc-state->score)))
+
+(define inference-timing #f)
+
+;;;queries
+(define (repeated-mcmc-query-core initializer kernel num-samples)
+  (begin
+    (when inference-timing
+          (display "initializing... \n"))
+    (let ([init-state (initializer)])
+      (when inference-timing
+            (display "initialized: ")
+            (display (current-date))
+            (display "\n"))
+      (let ([ret (mcmc-loop kernel init-state num-samples '())])
+        (when inference-timing
+              (display "done: ")
+              (display (current-date))
+              (display "\n"))
+        ret))))
+
+(define (mcmc-loop kernel state samples-left samples)
+  (if (< samples-left 1)
+      (reverse samples)
+      (mcmc-loop kernel (kernel state) (- samples-left 1) (pair (mcmc-state->query-value state) samples))))
+
+(define (mh-query samples lag normal-form-proc)
+  (repeated-mcmc-query-core (lambda () (rejection-initializer normal-form-proc))
+                            (basic-repeat-kernel lag normal-form-proc)
+                            samples))
+
+(define (mh-query/annealed-init temps samples lag rej-steps temps->nfqp)
+  (let ([normal-form-proc (apply temps->nfqp (first temps))])
+    (repeated-mcmc-query-core (lambda () (annealing-initializer rej-steps temps temps->nfqp))
+                              (basic-repeat-kernel lag normal-form-proc)
+                              samples)))
+
+;;;
+;;simple gradient ascent on continuous variables, using AD.
+
+(define (make-gradient-step step-size nfqp)
+  (lambda (state)
+        (let* ((grad (mcmc-state->gradient state))
+               (xrp-draws (mcmc-state->xrp-draws state))
+               (xrp-changes (map (lambda (gv) (let ((xrp-draw (first (pull-outof-addbox xrp-draws (first gv)))))
+                                                (pair xrp-draw (+ (xrp-draw-value xrp-draw) (* step-size (sigmoid (rest gv)))))))
+                                         grad))
+               (proposal (apply counterfactual-update (pair state (pair nfqp xrp-changes)))))
+      (first proposal))))
+
+(define (sigmoid x) (- (/ 1 (+ 1 (exp (- x)))) 0.5))
+
+(define (gradient-ascent steps step-size nfqp)
+  (let ((gstep (make-gradient-step step-size nfqp)))
+    (let loop ((state (rejection-initializer nfqp))
+               (trail '())
+               (steps-remaining steps))
+      (if (< steps-remaining 1)
+          (reverse trail)
+          (let ((newstate (gstep state)))
+            (loop newstate
+                  (pair (mcmc-state->query-value newstate) trail)
+                  (- steps-remaining 1)))))))
+  
+(define (annealed-gradient-ascent temps:high->low step-size temps->nfqp)
+  (let loop ((state (rejection-initializer (apply temps->nfqp (first temps:high->low))))
+             (trail '())
+             (temps temps:high->low))
+    (if (null? temps)
+        (reverse trail)
+        (let ((newstate ((make-gradient-step step-size (apply temps->nfqp (first temps))) state)))
+          (display "ascent loop, temp=")(display (first temps));(display " score=")(display (untapify (mcmc-state->score newstate)))
+          (newline)
+          (loop newstate
+                (pair (mcmc-state->query-value newstate) trail)
+                (rest temps))))))
+
+
+;; --------------------------------------------------------------------
+;; Hybrid Monte Carlo
+
+(define (continuous-xrp-draw? xrp-draw)
+  (tape? (xrp-draw-value xrp-draw)))
+
+(define (discrete-xrp-draw? xrp-draw)
+  (not (continuous-xrp-draw? xrp-draw)))
+
+(define (alist-map proc alist)
+  (if (null? alist)
+      '()
+      (let ([fst (first alist)])
+        (pair (proc (first fst)
+                    (rest fst))
+              (alist-map proc (rest alist))))))
+
+(define (order-values alist order)
+  (let ([trie (alist->trie alist)])
+    (map (lambda (key) (first (trie-pop trie key)))
+         order)))
+
+(define (scalar* sc lst)
+  (map (lambda (x) (* sc x)) lst))
+
+(define (list+ a b)
+  (map + a b))
+
+(define (list* a b)
+  (map * a b))
+
+(define (increment-state state nfqp increments)
+  (let* ([xrp-draws (mcmc-state->xrp-draws state)]
+         [xrp-changes (alist-map (lambda (addr inc)
+                                   (let ([xrp-draw (first (pull-outof-addbox xrp-draws addr))])
+                                     (pair xrp-draw (+ (xrp-draw-value xrp-draw) inc))))
+                                 increments)])
+    (apply counterfactual-update
+           (pair state (pair nfqp xrp-changes)))))
+
+;; leapfrog-step
+;; 
+;; arguments:
+;;  nfqp      normal form query proc
+;;  q         mcmc-state
+;;  a:p       alist of momenta (address -> real)
+;;  m-inv     list of reals (address order same as a:p)
+;;  dt        real
+;; 
+;; returns:
+;;  q-next    new mcmc-state
+;;  a:p-next  alist of new momenta (address -> real)
+;;  bw-fw     real
+(define (leapfrog-step nfqp q a:p m-inv dt)
+  (let* ([addresses (map first a:p)]
+         [p (map rest a:p)]
+         [q-gradient (order-values (mcmc-state->gradient q) addresses)]
+         [p-half (list+ p (scalar* (/ dt 2.0) q-gradient))]
+         [increments (scalar* dt (list* m-inv p-half))]
+         [q-next/bwfw (increment-state q nfqp (map pair addresses increments))]
+         [q-next-gradient (order-values (mcmc-state->gradient (first q-next/bwfw)) addresses)]
+         [p-next (list+ p-half (scalar* (/ dt 2.0) q-next-gradient))])
+    (list (first q-next/bwfw)
+          (map pair addresses p-next)
+          (second q-next/bwfw))))
+
+;; FIXME: m-inv should be parameters, or set cleverly.
+(define (leapfrog nfqp q a:p dt steps . maybe-bw/fw)
+  (let ((bw-fw (if (null? maybe-bw/fw) 0.0 (first maybe-bw/fw)))
+        (m-inv (make-list (length a:p) 1.0)))
+    (if (= steps 0)
+        (list q a:p bw-fw)
+        (let ([qn/pn/bwfw+ (leapfrog-step nfqp q a:p m-inv dt)])
+          (leapfrog nfqp
+                    (first qn/pn/bwfw+)
+                    (second qn/pn/bwfw+)
+                    dt
+                    (- steps 1)
+                    (+ bw-fw (third qn/pn/bwfw+)))))))
+
+;; Because the leapfrog integrator is reversible (and volume
+;; preserving), the only f/b-probs come from trace-updates.
+(define (make-leapfrog-proposal nfqp dt steps)
+  (lambda (q-p)
+    (let ([q/p/bwfw (leapfrog nfqp (first q-p) (second q-p) dt steps)])
+      (list (third q/p/bwfw)
+            (list (first q/p/bwfw)
+                  (second q/p/bwfw))))))
+
+;; FIXME: inv-mass terms
+;; FIXME: term for norm of mass.
+(define (hamiltonian-score q-p)
+  (let ((q (first q-p))
+        (a:p (second q-p)))
+    (let ([score (mcmc-state->score q)])
+      (if (equal? score -inf.0)
+          -inf.0
+          (+ score (* -0.5 (apply + (map (lambda (x) (expt x 2)) (map rest a:p)))))))))
+
+(define (make-leapfrog-kernel nfqp dt leapfrog-steps)
+  (make-mh-kernel (make-leapfrog-proposal nfqp dt leapfrog-steps)
+                  hamiltonian-score))
+
+(define (momentum-prior state)
+  (fold (lambda (addr/draw momenta)
+          (if (continuous-xrp-draw? (rest addr/draw))
+              (pair (pair (first addr/draw)
+                          (sample-gaussian 0.0 1.0))
+                    momenta)
+              momenta))
+        '()
+        (addbox->alist (mcmc-state->xrp-draws state))))
+
+;; Generate appropriate momenta from the momentum prior (this is
+;; secretly a kernel on momenta). Then apply leapfrog kernel, return
+;; the mcmc state (if we kept the momenta we'd reverse them).
+(define (make-hmc-kernel nfqp dt leapfrog-steps)
+  (let ([leapfrog-kernel (make-leapfrog-kernel nfqp dt leapfrog-steps)])
+    (lambda (state)
+      (let ([momenta (momentum-prior state)])
+        (first (leapfrog-kernel (list state momenta)))))))
+
+(define (hmc-query num-samples lag dt leapfrog-steps nfqp)
+  (repeated-mcmc-query-core
+   (lambda () (rejection-initializer nfqp))
+   (repeat-kernel lag
+                  (cycle-kernel (make-hmc-kernel nfqp dt leapfrog-steps)
+                                (make-mh-kernel (lambda (state)
+                                                  (selective-proposal-distribution state
+                                                                                   nfqp
+                                                                                   discrete-xrp-draw?))
+                                                mcmc-state->score)))
+   num-samples))
+
+(define (hmc-query/annealed-init temps init-step-size num-samples lag dt leapfrog-steps temps->nfqp)
+  (let ([nfqp (apply temps->nfqp (first temps))])
+    (repeated-mcmc-query-core
+     (lambda () (annealing-initializer 1 temps temps->nfqp
+                                  (lambda (nfqp) (make-gradient-step init-step-size nfqp)))) ;;do gradient ascent while annealing...
+     (repeat-kernel lag
+                    (cycle-kernel (make-hmc-kernel nfqp dt leapfrog-steps)
+                                  (make-mh-kernel (lambda (state)
+                                                    (selective-proposal-distribution state
+                                                                                     nfqp
+                                                                                     discrete-xrp-draw?))
+                                                  mcmc-state->score)))
+                                  
+     num-samples)))
+
+
+
+;; --------------------------------------------------------------------
+;; this is the code for psmc (population sequential monte carlo). this
+;; is particle filtering with an mcmc rejuvenation kernel and
+;; (eventually) a crossover move.  the sugarred call looks like
+;; (psmc-query temp-args temps popsize kernel-iterations
+;; ...defs... q-exp c-exp).
+(define (psmc-query temps popsize lag temps->nfqp)
+  (map mcmc-state->query-value (smc-core temps popsize lag temps->nfqp)))
+
+;;this does the smc without finalizing, so that we can either get the query values or the scores (etc).
+(define (smc-core temps popsize lag temps->nfqp)
+  (let smc ((temps temps) ;;FIXME: rest temps?
+            (population (repeat popsize (lambda () (begin
+                                                     (reset-store-xrp-draws) ;;FIXME!! this is to avoid accumulating xrp-draws...
+                                                     (rejection-initializer (apply temps->nfqp (first temps)))))))
+            (weights (make-list popsize 0)))
+
+    (let* (;(dummy (display (map mcmc-state->query-value population))) (dummy (display "\n"))
+           ;;step forward temps.
+           (rets (map (lambda (state) (counterfactual-update state (apply temps->nfqp (first temps)))) population))
+           (new-population (map first rets))
+           (cd-bw/fw (map second rets))
+           (weights (map (lambda (old-weight old-state new-state cd-bw/fw) (+ old-weight
+                                                                              (- (mcmc-state->score new-state) (mcmc-state->score old-state))
+                                                                              cd-bw/fw))
+                         weights
+                         population
+                         new-population
+                         cd-bw/fw))
+           
+           ;;resample and reset weights (optional).
+           (resample-distribution (map exp (log-normalize weights)))
+           (collapse? (nan? (first resample-distribution)))
+           (new2-population (if collapse?
+                                '()
+                                (repeat popsize (lambda () (begin
+                                                             (reset-store-xrp-draws) ;;FIXME!! this is to avoid accumulating xrp-draws...
+                                                             (multinomial new-population resample-distribution))))))
+           (weights (make-list popsize 0))
+           
+           ;;rejuvenate using kernel.
+           (kernel (repeat-kernel lag (make-mh-kernel (lambda (state) (basic-proposal-distribution state (apply temps->nfqp (first temps))))
+                                                               mcmc-state->score)))
+           (new3-population (map kernel new2-population)))
+
+      (begin (map (lambda (x y) (begin (display "  ")(display x)(display "  ")(display y)(display "\n")))
+                  (map mcmc-state->query-value new3-population)
+                  (map mcmc-state->score new3-population))
+             (display "\n")
+      ;;loop if there are any temps left.
+      (if (or collapse? (null? (rest temps)))
+          new3-population
+          (smc (rest temps) new3-population weights)))))  )
+
+
+ (define (log-sum-exp . log-vals)
+   (let* ([max-log-val (apply max log-vals)])
+     (if (equal? max-log-val -inf.0)
+         -inf.0
+         (+ (log (exact->inexact (sum (map (lambda (val) (exp (- val max-log-val))) log-vals))))
+            max-log-val))))
+
+ (define (log-normalize log-scores)
+   (let* ([score-sum (apply log-sum-exp log-scores)])
+     (map (lambda (score) (- score score-sum)) log-scores)))

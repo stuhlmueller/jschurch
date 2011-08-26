@@ -1,0 +1,81 @@
+(define (gaussian-lnpdf val mu sigma)
+  (* -0.5 (+ (+ 1.8378770664093453 (log sigma)) (/ (* (- val mu) (- val mu)) sigma) )) )
+
+(define (noisy= x y noise)
+  (log-flip (gaussian-lnpdf (- x y) 0.0 noise)))
+
+(define (check-test info expectation-fn true-expectation tolerance name)
+  (begin
+    (display "inference test: ")(display name)
+    (let* ((estimates (map (lambda (run) (mean (map expectation-fn run))) (untapify info)))
+           (errors (map (lambda (estimate) (abs (- estimate true-expectation))) estimates))
+           (mean-abs-error (mean errors))          
+           (std-error (sqrt (/ (mean (map (lambda (x) (* x x)) errors))
+                               (length errors)) ) ))
+      (if (> mean-abs-error tolerance)
+          (for-each display (list ".. failed! true expectation: "  true-expectation ", test mean: " (mean estimates) "\n"))
+          (display ".. passed.\n")))))
+
+(define num-samples 1000)
+(define lag 1)
+(define runs 5)
+(define dt 0.1)
+(define num-lp-steps 5)
+
+(check-test
+ (repeat runs
+         (lambda () (hmc-query num-samples lag dt num-lp-steps
+               ;; gradient-ascent (* num-samples num-lp-steps) dt
+                          (define x (gaussian 5 2))
+                          x
+                          true)))
+ (lambda (x) x)
+ 5.0
+ .5
+ "unconditional gaussian")
+
+(check-test
+ (repeat runs
+         (lambda () (hmc-query num-samples lag dt num-lp-steps
+               ;; gradient-ascent (* num-samples num-lp-steps) dt
+                          (define reflectance (gaussian 1 1))
+                          (define illuminance (gaussian 3 0.5))
+                          (define lightness (* reflectance illuminance))
+                          reflectance
+                          (noisy= lightness 5.0 0.1) )))
+ (lambda (x) x)
+ 1.6 ;; estimated from mh samples (seems to be slightly off, should re-estimate with rejection)
+ .4
+ "reflectance/illuminance test")
+
+(check-test
+ (repeat runs
+         (lambda () (hmc-query num-samples lag dt num-lp-steps
+               ;; gradient-ascent (* num-samples num-lp-steps) dt
+                          (define a (gaussian 0.0 1.0))
+                          (define b (if (< a 0.0) (uniform-draw '(-2.0 -3.0)) 1.0) )
+                          (define c (* a b))
+                          a
+                          (noisy= c 0.5 0.1) )))
+ (lambda (x) x)
+ 0.28 ;; estimated by a whole bunch of mh-query samples.
+ .05
+ "stratified (mixed real/discrete erps) test")
+
+(check-test
+ (repeat runs
+         (lambda () (hmc-query num-samples lag .1 num-lp-steps
+               ;; gradient-ascent (* num-samples num-lp-steps) .1
+                          (define m (uniform -5 5))
+                          (define gen-data (repeat 3 (lambda () (gaussian m 0.1))))
+                          m
+                          (and
+                           (noisy= (first gen-data) 3.9 0.01)
+                           (noisy= (second gen-data) 4.0 0.01)
+                           (noisy= (third gen-data) 4.1 0.01)) )))
+ (lambda (x) x)
+ 4.0
+ .5
+ "inferring the mean of a gaussian")
+
+'done

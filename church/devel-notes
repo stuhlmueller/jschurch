@@ -1,0 +1,105 @@
+
+
+-partial evaluation (before or after compilation to scheme)? this will potentially speed things up a lot since it will avoid redoing work in mh.
+
+
+
+
+to be purely functional, thread all state through computation. 
+to thread state, put source into A-normal form (so applications are only applied to bound variables).
+call (down): address, old-world, score, xrp state tables, (constraints)
+return (up): value, new-world, score (or delta-score), new state, forw/rev probs.
+
+mem goes away!
+the addressing transform captures current address st memoized procs get called with the address of their creation site extended by args.
+this means that, if the current world has xrps that have been added, random choices of the second eval of a memd proc on the same args will turn out the same.
+(note: need to be careful not to double-add score/stats when an xrp-draw is touched multiple times...)
+
+
+todo:
+ -add macros? switch desugaring to macros wherever possible (everywhere except load?). make a syntax-preamble.church for most of the sugar.
+   -cond de-sugar shouldn't require an else clause.
+   -make and/or into syntactic sugar as in scheme?
+   -allow internal defines (in lambda body). 
+ -test/debug threading method.
+ -add in support for eval in church... interpreter?
+ -think through handling of create/delete events and f/b computation.
+ -fix gensym xrp to have prob 0 when multiple draws (at different addresses) return same symbol.
+ -the scoping of queries is probably wrong -- only make proposals to xrp-draws created within counterfactual?
+ -clean up reset-xrp-draws hack? it's kind of needed as long as time to make new xrp-draw depends on number of old ones...
+ -clean up handling of threading/incremental code generation: small set of functions to handle the options?
+
+ -put in incremental score/stats method (with compile flag).
+   -xrp state and scoring done incrementally, only updating on changes.
+   -don't reset score on counterfactual-update.
+   -existing xrp-stats not reset when make-xrp is called.
+   -to handle changes in hyperparams of xrps a complete rescoring is needed.
+   -what's the right bw/fw to handle create/delete events?
+   -to get right assymptotics need a different method for removing unused xrp-draws (also for caching to work).
+
+ -laziness + constraint prop.
+   -why is forcing so slow? laziness?
+   -compute supports (ala cfa) and use for propogating through ifs etc?
+   -do program transform on applications of invertible primitives to sequence operands with inverter.
+     -once inside on non-inverted primitive, don't do constraint prop.
+   -proposals only within constraint set (for starters propose uniformly in set new-constrained-support - (old-constrained-support - current-val)).
+   -no proposals to xrps with singleton constraint (replaces no-proposals construct).
+   -do partial contraint prop at compilation? ie. in query with 'and' condition, force each operand of 'and' to be true...
+
+ -noisy-everything + annealing (only where constraint prop doesn't work)?
+   -noisification after constraint prop transform shouldn't interfere with constraint prop.
+   -psmc with default annealing on noise param.
+
+ -more efficient data structure for addboxes -- trie or hashtable?
+ -caching / short-circuit evaluation: wrap an expression with a cache-check that checks if all relevant variables in env are same as last time, if so returns same return value and world arguments as last time, with current score and state (no deltas).
+ -assymptotics: the time per iteration should be linear in the number of changed xrp-draws, and best-case constant in the total number of xrp-draws. ths requires:
+   -caching intermediate values (so unchanged xrp-draws aren't touched).
+   -no separate clean-store function (which loops across xrp-draws).
+   -xrp-draw find/replace that is constant time (by changing addbox data structure).
+ -AD (tapify with same index on re-evaluation?)
+ -conjugacy detection.
+ -delayed rejection.
+ -population smc, including crossover.
+ -make an enurmeration query using jeff's techniques?
+ -prettiness: trace drawing, R interface, world-tree drawing, ..
+
+notes:
+ -is it worth copying make-xrp (etc) code per appearance in church source, to help the compiler specialize the xrp functions?
+ -can we dynamically change the equivalence class we are doing mcmc over? eg we could have 'required xrp-draws' which will always have a value in the store, never being removed or incuring forward/backward scores. is it legal to change the set of required xrp-draws as we go? for instance just decide not to bother deleting a draw which isn't used in the current state?
+ -do basic kernel as mixture kernel of single-site proposals?
+ -better to put the stateful xrp pieces into scheme to avoid church overhead?
+
+
+
+
+
+
+
+
+(define (cache expr-id relevant-vals) ;;this needs to be marked with generation or iteration or something to know which value to re-use...
+  (let ((rv-ret (hash-table-ref expr-id cache-table)))
+    (if (not rv-ret)
+        (pair false false) ;;cache miss on this expression
+        (if (equal? (first rv-ret) relevant-vals)
+            ()))))
+
+
+
+(define (add-caching sexpr)
+  (let ((relevant-vars (get-free-vars sexpr))
+        (expr-id (make-new-id)))
+    `(let* ((relevant-vals (list ,@relevant-vars))
+            (cached (cache ,expr-id relevant-vals))
+            (hit (first cached))
+            (val (rest cached)))
+       (if hit
+           ;;don't evaluate sexpr, just return cached return values
+           val
+           ;;evalutae sexpr, add to cache
+           (let ((new-val ,sexpr))
+             (add-to-cache! new-val expr-id relevant-vals)
+             new-val) ))
+    ))
+
+
+

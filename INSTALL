@@ -1,0 +1,6 @@
+To get access to the bher command line tool from any directory, cd into the bher directory and type:
+echo -e "\nexport PATH=`pwd`:\$PATH" >> ~/.bashrc 
+echo -e "\nexport IKARUS_LIBRARY_PATH=`pwd`:\$IKARUS_LIBRARY_PATH" >> ~/.bashrc
+source ~/.bashrc
+
+Replace ~/.bashrc with the path to your shell configuration file.

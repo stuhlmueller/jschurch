@@ -1,0 +1,79 @@
+
+;;run through the support of the final xrp, when support is done run through support of previous one 
+
+;;given a world with a list of xrp-draws (each marked with support), get the next world by incrementing the latest that isn't at it's end. all that roll over go back to the first of their support.
+
+;;need the function make-initial-enumeration-state to be defined in header. this should make state that is in mode to propose left-most in support.
+;;fixme: need to enumerate through the query expression (rather than delaying)?
+
+
+;;create an xrp by marginalizing a thunk via complete enumeration.
+(define (enumeration-query nfqp)
+  (let* ((dist (enumerate nfqp (first (counterfactual-update (make-initial-enumeration-state) nfqp))))
+         (dist (merge-duplicates dist))
+         (dist (normalize dist))
+         (support (map first dist))
+         (probs (map rest dist))
+         ;(dummy (begin (display "marginal dist: ")(display dist)(newline)))
+         (sampler (lambda args (multinomial support probs)))
+         (scorer (lambda (args value) (log (rest (assoc value dist)))))
+         (xrp (make-stateless-xrp 'synthetic sampler scorer '() (lambda args support))))
+    (xrp)));(repeat samples xrp)))
+
+(define (get-dist thunk)
+  (let* ((nfqp (lambda () (let ((t (thunk))) (pair true (lambda () t)))))
+         (dist (enumerate nfqp (first (counterfactual-update (make-initial-enumeration-state) nfqp))))
+         (dist (merge-duplicates dist))
+         (dist (normalize dist)))
+    dist))
+
+(define (merge-duplicates dist)
+  (if (null? dist)
+      '()
+      (let ((rem (remove (first (first dist)) dist)))
+        (pair (pair (first (first dist)) (rest rem))
+              (merge-duplicates (first rem))))))
+(define (remove val dist)
+  (if (null? dist)
+      (pair '() 0.0)
+      (let ((rem (remove val (rest dist))))
+        (if (equal? val (first (first dist)))
+            (pair (first rem) (+ (rest rem) (rest (first dist))))
+            (pair (pair (first dist) (first rem)) (rest rem))))))
+
+(define (normalize dist)
+  (let ((norm (sum (map rest dist))))
+    (map (lambda (d) (pair (first d) (/ (rest d) norm))) dist)))
+
+;;returns an a-list of return value . score pairs.
+(define (enumerate thunk from-state . dist)
+  (let* ((dist (pair (pair (mcmc-state->query-value from-state) (exp (mcmc-state->score from-state)))
+                     (if (null? dist) '() (first dist))))
+         (interventions (next (map rest (addbox->alist (mcmc-state->xrp-draws from-state))))))
+    (if (first interventions)
+        ;;top xrp-draw rolled over -- done enumerating:
+        dist
+        ;;enumerate next:
+        (enumerate thunk (first (apply counterfactual-update (pair from-state (pair thunk (second interventions))))) dist))))
+
+;; returns a list of xrp-draw . new value pairs (ie. interventions).
+;; xrp-draws is a list, not an addbox
+(define (next xrp-draws)
+  (if (null? xrp-draws)
+      (list true '()) ;;first is carry bit, rest is interventions
+      (let ((rem (next (rest xrp-draws))))
+        (if (first rem) ;;rollover?
+            ;;go to next element of support for this xrp-draw
+            (let* ((cur-xrp-draw (first xrp-draws))
+                   (support (xrp-draw-support cur-xrp-draw))
+                   (cur-val (xrp-draw-value cur-xrp-draw))
+                   (rest-support (member cur-val support)))
+              (if (null? (rest rest-support))
+                  ;;rollover and reset
+                  (list true (pair (pair cur-xrp-draw (first support))
+                                   (second rem)))
+                  ;;increment value, no rollover
+                  (list false (pair (pair cur-xrp-draw (second rest-support))
+                                    (second rem)))))
+            ;;otherwise incrementing is already done, so just return
+            rem))))

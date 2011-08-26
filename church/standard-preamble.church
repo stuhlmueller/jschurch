@@ -1,0 +1,326 @@
+;;this standard preamble is a bunch of utilities and erps that one generally wants to have available in writing church programs.
+;;it should be split up into coherent libraries...
+
+(define (sample thunk) (thunk))
+
+;; (define (Y f)  ;; the Y-combinator, used by let conversions to build recursive functions
+;;   (let ((future (lambda (future)
+;;                   (f (lambda args
+;;                        (apply (future future) args) )) )))
+;;     (future future) ) ) 
+
+;(define mh-query (lambda args (apply repeated-mh-def-query (append args (list (get-current-environment))))))
+
+
+; @desc
+; Draw from a list uniformly at random (could do this with multinomial instead).
+; @param lst the list to draw from
+; @return a randomly chosen element from the list (or null, if the list is empty)
+(define (uniform-draw lst) 
+  (if (null? lst)
+      '()
+      (list-ref lst (sample-integer (length lst)))))
+
+;old version: pure church
+;(define uniform-draw 
+;  (marg
+;   (lambda (lst)
+;     (if (flip (/ 1 (length lst)))
+;         (first lst)
+;         (uniform-draw (rest lst))))
+;   (lambda (args val) (- (log (length (first args))))) ))
+
+
+; @desc
+; Returns the second element of a list.
+; @param lst the list
+; @return the second element of the list
+;(define (second lst) (list-ref lst 1)) ; (droy) faster. 
+
+; @desc
+; Returns the third element of a list.
+; @param lst the list The list to return an element from.
+; @return the third element of the list
+;(define (third lst) (list-ref lst 2))
+
+; @desc
+; Returns the fourth element of a list
+; @param lst the list
+; @return the fourth element of the list
+;(define (fourth lst) (list-ref lst 3))
+
+; @desc
+; Returns the fifth element of a list.
+; @param lst the list
+; @return the fifth element of the list
+;(define (fifth lst) (list-ref lst 4))
+
+; @desc
+; Returns the sixth element of a list.
+; @param lst the list
+; @return the sixth element of the list
+;(define (sixth lst) (list-ref lst 5))
+
+; @desc
+; Returns the seventh element of a list
+; @param lst the list
+; @return the second element of the list
+;(define (seventh lst) (list-ref lst 6))
+
+; @desc
+; Checks where everything in a list is true.
+; @param lst the list
+; @return Returns false if everything in the list is false and otherwise returns the last element of the list.
+(define (all lst) (apply and lst)) ;used to be (fold and true lst))
+
+; @desc
+; Checks whether anything in the list is true.
+; @param lst the list
+; @return Returns false if everything in the list is false and otherwise returns the first non-false element.
+(define (any lst) (apply or lst));(fold or false lst))
+
+
+; @desc
+; Gives the product of elements in a list.
+; @param lst the list
+; @return The product of the list
+(define (product lst) (apply * lst));(fold * 1 lst))
+
+; @desc
+; Calculates the sum of elements in a list.
+; @param lst the list
+; @return The sum of the list.
+(define (sum lst) (apply + lst));(fold + 0 lst))
+
+;;some higher-order procedures. it would be faster if these were collapsed... (can't be primitive, though.)
+
+; @desc
+; Repeats a procedure a given number of times.
+; @param N number of times to repeat
+; @param proc the procedure to repeat
+; @returns a list where each element is the result of a call of proc. Returns the empty list if N=0.
+(define (repeat N proc) (if (= N 0) '() (pair (proc) (repeat (- N 1) proc))))
+
+;;for-each is useful inside of (begin ..., for debugging, etc.
+
+; @desc
+; Applies a procedure to each element of a list. Don't use this in an actual model. It's for
+; debugging, etc.
+; @param proc: procedure to apply
+; @param lst: the list
+; @returns void.
+(define (for-each proc lst)  
+  (if (null? lst) '() (begin (proc (first lst))
+                             (for-each proc (rest lst)) )) )
+
+; @desc
+; Fold. (You know you want to....)
+; @param proc The procedure to apply, which should take two arguments: the next value and the accumulated value.
+; @param init The value to start with (initial value for the accumulated value argument of proc).
+; @param lst The list to fold over.
+; @returns list
+(define (fold proc init . lsts)
+  (if (null? (first lsts))
+      init
+      (apply fold
+             (pair proc
+                   (pair (apply proc (append (single-map first lsts) (list init)))
+                         (single-map rest lsts))))))
+;(define (unfold proc init stop) ...
+
+; @desc
+; Returns the reverse of a list.
+; @param lst the list
+; @returns the reverse of the list
+(define (reverse lst) (fold pair '() lst)) ;;this one could be primitive.
+
+; @desc
+; Apply a procedure to each element of some lists.
+; proc should accept as many arguments as there are lists.
+; @param proc The procedure to apply.
+; @param lst ... The lists to map over.
+; @returns list
+(define (map proc . lsts)
+  (if (null? (rest lsts)) (single-map proc (first lsts)) (multi-map proc lsts)))
+
+(define (single-map proc lst) (if (null? lst) '() (pair (proc (first lst)) (map proc (rest lst)))))
+(define (multi-map proc lsts) ;;takes list of lists and proc of that many arguments.
+  (if (null? (first lsts)) '() (pair (apply proc (single-map first lsts)) (multi-map proc (single-map rest lsts)))))
+(define (many-map proc . lsts) (multi-map proc lsts))
+
+; @desc
+; Return a list with only the elements that satisfy the predicate.
+; @param pred The predicate to filter with.
+; @param lst The list to filter.
+; @returns list
+(define (filter pred lst) 
+  (if (null? lst) 
+      '()
+      (if (pred (first lst)) 
+          (pair (first lst) (filter pred (rest lst)))
+          (filter pred (rest lst)))))
+
+(define (filter-map proc lst)
+  (if (null? lst)
+      '()
+      (let ([val (proc (first lst))])
+        (if val
+            (pair val (filter-map proc (rest lst)))
+            (filter-map proc (rest lst))))))
+
+(define (list-index pred lst . i)
+  (if (null? lst)
+      false
+      (let ((i (if (null? i) 0 (first i))))
+        (if (pred (first lst))
+            i
+            (list-index pred (rest lst) (+ i 1))))))
+
+; @desc
+; Make a list of lists using the elements of the input lists.
+; For example (zip '(1 2 3) '(4 5 6)) returns the list '((1 4) (2 5) (3 6)).
+; @param lst ... The lists to zip together.
+; @returns list
+(define (zip . lists)
+  (multi-map list lists))
+
+; @form (rejection-query defines query-exp condition-exp env)
+; @desc
+; Rejection query: slow but sound.
+; @param defines ... Definitions to evaluate -- set up bindings for the query. Must be quoted.
+; @param query-exp The expression you want to know about. Must be quoted.
+; @params condition-exp The expression to condition on. Must be quoted.
+; @returns A codnitional sample.
+(define (rejection-query nfqp) ;;NOTE: no longer takes an env -- uses current env. is registered as query sugar in compiler.
+  (let ((val (nfqp)))
+    (if (first val) ((rest val)) (rejection-query nfqp))))
+
+;;draw from a discrete distribution (ie. a mutlinomial over integers 0..(N-1)). 
+;;assumes probabilities are already normalized.
+
+(define discrete sample-discrete)
+
+
+;(define discrete
+;  (marg
+;   (lambda (probs) (first (fold discrete-helper (list 0 0 0.0) probs)))
+;   (lambda (args val) (if (and (number? val) (< val (+ 1 (length (first args)))))
+;                          (log (list-elt (first args) val))
+;                          -inf.0)) ))
+;
+;(define (discrete-helper next-weight current)
+;  (let ((current-draw (first current))
+;        (current-position (+ 1 (second current)))
+;        (current-weight (third current)))
+;    (list (if (= 0 next-weight)
+;              current-draw
+;              (if (flip (/ next-weight (+ next-weight current-weight))) current-position current-draw))
+;          current-position
+;          (+ next-weight current-weight))))    
+
+; @desc
+; Draw from a multinomial.
+; Assumes probabilities are already normalized.
+; @param vals The list of values to draw from
+; @param probs The probabilities of the values
+; @return a draw from the list of values
+(define (multinomial vals probs)
+  (list-ref vals (discrete probs) ))
+
+;; @desc
+;; Draw from the beta distribution.
+;; @param alpha 
+;; @param beta
+;; @return number in range [0, 1]
+(define (beta a b) (dirichlet (list a b)))
+
+;;GEM is a distribution on "partitions"...
+(define (make-GEM alpha)
+  (let ((sticks (mem (lambda (x) (beta 1.0 alpha)))))
+    (lambda () (pick-a-stick sticks 1))))
+(define (pick-a-stick sticks J)
+  (if (flip (sticks J))
+      J
+      (pick-a-stick sticks (+ J 1))))
+
+;;this is a clean DPmem -- we augment the procedure with another argument, which will be drawn from a crp, then memoize. 
+;;(fixed to have a separate crp for each argsin...)
+
+; @desc
+; Stochastically memoize a procedure. Uses stick-breaking representation.
+; @param alpha Concentration parameter.
+; @param proc The procedure to memoize. (I.e. the "base measure".)
+; @return A procedure that is a stochastically memoized version of proc.
+(define (sticky-DPmem alpha proc)
+  (let ((augmented-proc (mem (lambda (args part) (apply proc args))))
+        (crps (mem (lambda (args) (make-GEM alpha)))))
+    (lambda argsin (augmented-proc argsin ((crps argsin))))))
+
+
+;;Pitman-Yor Process generalization of CRP
+;; Note when a=0 and b>0 then this is the same as the CRP
+(define (make-PYP a b)
+  (let ((sticks (mem (lambda (x) (beta (- 1.0 a) (+ b (* a x)))))))
+    (lambda () (pick-a-stick sticks 1))))
+
+(define (PYmem a b proc)
+  (let ((augmented-proc (mem (lambda (args part) (apply proc args))))
+        (crps (mem (lambda (args) (make-PYP a b)))))
+    (lambda argsin (augmented-proc argsin ((crps argsin))))))
+
+; @desc
+; Noisy list comparison using Levenshtein distance. Returns true when (flip coupling^lev-distance). When coupling is 0 then perfect match is required. When coupling is 1, then it always returns true.
+; @param list1 The first list. 
+; @param list2 The second list
+; @param coupling The coupling parameter in [0,1] which states how serious you are about equality. If it is 0 then this is just (equal? list1 list2), when it is 1 always retrurn true.
+; @returns true/false
+(define (noisy-lev-list-equal? list1 list2 coupling)
+  (if (= 0.0 coupling)
+      (equal? list1 list2)
+      (flip (expt coupling (lev-dist list1 list2)))))
+
+
+; @desc
+; Recursively flatten a list of lists.
+; @param lst the list of lists
+; @returns a list where every element is is not a list
+(define (flatten lst)
+  (if (null? lst)
+      '()
+      (if (list? (first lst))
+          (append (flatten (first lst)) (flatten (rest lst)))
+          (pair (first lst) (flatten (rest lst))))))
+
+
+;; @desc
+;; Compute the mean of a list of numbers.
+;; @param lst The list. 
+;; @returns number
+(define (mean lst) (/ (apply + lst) (length lst)))
+;; @desc
+;; Compute the variance of a list of numbers.
+;; @param lst The list. 
+;; @returns number
+(define (variance lst)
+  (let ((mn (mean lst)))
+    (mean (map (lambda (x) (expt (- x mn) 2)) lst))))
+
+ ;; (define sample->val first)
+ ;; (define sample->log-p (lambda (x) (first (second x))))
+ ;; (define sample->log-q (lambda (x) (rest (second x))))
+
+ ;; (define (not-rejected? sample)
+ ;;   (not (= (sample->log-p sample) -inf.0)))
+
+ ;; (define (importance-marginal samples)
+ ;;   (let* ([accepted-samples (filter not-rejected? samples)]
+ ;;          [weights (map (lambda (s) (exp (- (sample->log-p s) (sample->log-q s)))) samples)]
+ ;;          [wsum (/ (sum weights) (length samples))])
+ ;;     (cond ((nan? wsum) +nan.0)
+ ;;           ((= wsum 0.0) -inf.0)
+ ;;           (else (log wsum)))))
+
+
+;;FIXME!! implement no-proposals or singleton constraint detection to deprecate it...
+(define (no-proposals x) (begin (display "warning: no-proposals not implemented.\n")
+                                x))
