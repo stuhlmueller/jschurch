@@ -47,6 +47,15 @@
 	'()
 	(recur args))))
 
+(define (make-list len . maybe-elt)
+  (let ((elt (cond ((null? maybe-elt) #f) ; Default value
+		   ((null? (cdr maybe-elt)) (car maybe-elt))
+		   (else (error "Too many arguments to MAKE-LIST"
+				(cons len maybe-elt))))))
+    (do ((i len (- i 1))
+	 (ans '() (cons elt ans)))
+	((<= i 0) ans))))
+
 ;; right fold
 (define (fold f base xs) 
   (if (null? xs)
