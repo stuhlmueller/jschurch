@@ -4,10 +4,12 @@
 
 <div id="bs-console"></div>
 
-<script type="text/javascript" src="../Downloads/biwascheme/lib/biwascheme.js">
+<script type="text/javascript" src="../external/biwascheme/lib/biwascheme.js">
 
 (define discrete-pdf #f)
 (define discrete-sampler #f)
+
+
 (define pi #f)
 (define logistic #f)
 (define lnfact #f)
