@@ -40,6 +40,11 @@ compilers = {
         "trailer" : "scheme-compilers/trailer-biwa.sc",
         "extension" : ".html",
         "runnable" : False },
+    "scheme2js" : {
+        "header" : "scheme-compilers/header-scheme2js.sc",
+        "trailer" : "scheme-compilers/trailer-scheme2js.sc",
+        "extension" : ".ss",
+        "runnable" : False },
     }
 
 @optfunc.main
@@ -50,7 +55,7 @@ compilers = {
 @optfunc.arghelp('time', 'record the time it takes for the compiled file to run')
 @optfunc.arghelp('set', 'run church file with multiple parameter settings')
 @optfunc.arghelp('keep', 'do not delete compiled file')
-@optfunc.arghelp('compiler', 'compiler to use (available: vicare, biwa)')
+@optfunc.arghelp('compiler', 'compiler to use (available: vicare, biwa, scheme2js)')
 def main(file, verbose=False, debug=False, keep=False, pretty=False, time=False, norun=False, ext="", set="", compiler="vicare"):
     """Usage: %prog <file> [options]
 
@@ -132,4 +137,32 @@ Examples:
             if not keep:
                 vprint("removing compiled file", verbose)
                 call("rm -f '%(out_path)s'" % settings, verbose)
+
+
+        if compiler=="scheme2js":
+            vprint("compiling scheme to js via scheme2js ", verbose)
+            settings["js_out_path"] = settings["in_path"] + ".js"
+            settings["html_out_path"] = settings["in_path"] + ".html"
+            settings["scheme2js_path"] = abspath(os.path.join(settings["bher_path"], "external/scheme2js/scheme2js.jar"))
+            settings["scheme2js_runtime_path"] = abspath(os.path.join(settings["bher_path"], "external/scheme2js/runtime.js"))
+            call("java -jar '%(scheme2js_path)s' '%(out_path)s' -o '%(js_out_path)s'" % settings, verbose)
+            vprint("constructing html file ", verbose)
+            call("""
+echo '<!DOCTYPE html>
+<html>
+<body>
+
+<div id="console"></div>
+
+<script type="text/javascript" src="%(scheme2js_runtime_path)s">
+</script>
+
+<script type="text/javascript" src="%(js_out_path)s">
+</script>
+
+</body>
+</html> ' > '%(html_out_path)s'
+""" % settings, verbose)
+
+        
 

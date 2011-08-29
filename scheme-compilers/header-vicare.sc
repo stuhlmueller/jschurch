@@ -56,3 +56,8 @@
 (define tapify (make-tapifier))
 (define (min a b) (if (< a b) a b)) ;;FIXME: proper dmin?
 (define (continuous? x) (and (real? x) (not (fixnum? x))))
+
+
+(define infinity +inf.0)
+(define minus-infinity -inf.0)
+(define nan +nan.0)

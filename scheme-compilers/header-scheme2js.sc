@@ -1,17 +1,17 @@
-<!DOCTYPE html>
-<html>
-<body>
+;; <!DOCTYPE html>
+;; <html>
+;; <body>
 
-<div id="bs-console"></div>
+;; <div id="bs-console"></div>
 
-<script type="text/javascript" src="../external/biwascheme/lib/biwascheme.js">
+;; <script type="text/javascript" src="../external/biwascheme/lib/biwascheme.js">
 
 (define discrete-pdf #f)
 (define discrete-sampler #f)
 
-(define infinity +inf.0)
-(define minus-infinity -inf.0)
-(define nan +nan.0)
+(define infinity 10000000000000000000000000) ;;FIXME!!
+(define minus-infinity -10000000000000000000000000) ;;FIXME!!
+(define nan (/ 1 0))
 
 (define pi #f)
 (define logistic #f)
@@ -36,6 +36,9 @@
 (define seed-rng #f)
 (define sum #f)
 (define logsumexp #f)
+
+(define random-real Math.random)
+(define (random-integer n) (Math.floor (* (Math.random) n)))
 
 ;; from jscreme
 (define (append . args)

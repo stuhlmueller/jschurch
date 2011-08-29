@@ -37,10 +37,15 @@
 (define (rejection-initializer normal-form-proc)
   (let ((proposal-state (first (counterfactual-update (make-initial-mcmc-state) normal-form-proc)))) ;;don't care about bw/fw for init.
     (if (= -inf.0 (mcmc-state->score proposal-state))
-        (rejection-initializer normal-form-proc)
-        proposal-state)))
+        (begin (when verbose-init
+                  (display "annealing-initializer: failed, restarting at top ...\n"))
+               (rejection-initializer normal-form-proc))
+        (begin
+                (when verbose-init
+                      (display "annealing-initializer: succeeded!\n"))
+                proposal-state))))
 
-(define verbose-init #t)
+(define verbose-init #f)
 
 ;; initialize using rejection on highest temp
 ;; then for each temp from high to low:
@@ -124,7 +129,7 @@
 
 (define inference-timing #f)
 
-;;;queries
+;;;standard queries
 (define (repeated-mcmc-query-core initializer kernel num-samples)
   (begin
     (when inference-timing
@@ -157,7 +162,7 @@
                               (basic-repeat-kernel lag normal-form-proc)
                               samples)))
 
-;;;
+;;;----------------------------------------------------------
 ;;simple gradient ascent on continuous variables, using AD.
 
 (define (make-gradient-step step-size nfqp)
@@ -198,7 +203,7 @@
                 (rest temps))))))
 
 
-;; --------------------------------------------------------------------
+;;; --------------------------------------------------------------------
 ;; Hybrid Monte Carlo
 
 (define (continuous-xrp-draw? xrp-draw)
