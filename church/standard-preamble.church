@@ -71,13 +71,13 @@
 ; Checks where everything in a list is true.
 ; @param lst the list
 ; @return Returns false if everything in the list is false and otherwise returns the last element of the list.
-(define (all lst) (apply and lst)) ;used to be (fold and true lst))
+(define (all lst) (apply and lst)) ;old:  (fold (lambda (x y) (and x y)) true lst))  
 
 ; @desc
 ; Checks whether anything in the list is true.
 ; @param lst the list
 ; @return Returns false if everything in the list is false and otherwise returns the first non-false element.
-(define (any lst) (apply or lst));(fold or false lst))
+(define (any lst) (apply or lst)) ;old:  (fold (lambda (x y) (or x y)) false lst))    
 
 
 ; @desc

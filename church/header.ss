@@ -26,17 +26,18 @@
 
  (define *no-forcing* true)
  (define *AD* true) ;;when AD is true, continuous XRP return values will be tapified.
-
+ 
  ;;the header is a list of definitions in the (target) scheme. it provides primitives, xrp handling, mh helpers, etc.
  ;;any free "church-" variable in the program that isn't provided explicitly (by generate-special or by external defs)
  ;;is assumed to be a scheme primitive, and a church- definition is generated for it.
+ ;;(free symbols that occur in operator position are assumed primitive, and won't have church- prefix.)
  (define (generate-header free-variables external-defs lazy)
    (set! *no-forcing* (not lazy)) 
    (let* ((special-defs (generate-special))
           (def-symbols (map (lambda (d) (if (pair? (second d)) (first (second d)) (second d)))
-                            (append special-defs external-defs))) ;;get defined symbols
-          (leftover-symbols (filter (lambda (v) (not (memq v def-symbols))) (filter church-symbol? (delete-duplicates free-variables))))
-          (primitive-defs (map (lambda (s) (primitive-def s)) leftover-symbols)))
+                            (append special-defs external-defs))) ;;get symbols defined by header and external fns.
+          ;;any remaining church- free variables is assumed to have an underlying primitive, package them up:
+          (primitive-defs (map primitive-def (lset-difference eq? (filter church-symbol? free-variables) def-symbols))))
      (append external-defs primitive-defs special-defs)))
 
 
@@ -44,7 +45,7 @@
  (define (prefix-church symb) (string->symbol (string-append "church-" (symbol->string symb))))
  (define (un-prefix-church symb) (if (church-symbol? symb)
                                      (string->symbol (list->string (drop (string->list (symbol->string symb)) 7)))
-                                     symb))
+                                      symb))
  (define (church-symbol? symb) (and (< 7 (length (string->list (symbol->string symb))))
                                     (equal? "church-" (list->string (take (string->list (symbol->string symb)) 7)))))
  
@@ -106,9 +107,9 @@
      
      (define church-true #t)
      (define church-false #f)
-     (define church-pair ,(wrap-primitive 'cons))
-     (define church-first ,(wrap-primitive 'car))
-     (define church-rest ,(wrap-primitive 'cdr))
+     ;(define church-pair ,(wrap-primitive 'cons))
+     ;(define church-first ,(wrap-primitive 'car))
+     ;(define church-rest ,(wrap-primitive 'cdr))
      (define (church-or address store . args) (fold (lambda (x y) (or x y)) #f args)) ;;FIXME: better way to do this?
      (define (church-and address store . args) (fold (lambda (x y) (and x y)) #t args))
 
@@ -116,6 +117,58 @@
      (define (church-force address store val) (if (and (pair? val) (eq? (car val) 'delayed))
                                                   (church-force address store ((cadr val) address store))
                                                   val))
+
+;; ;;;
+;;      (define (set-xrp-stats! xrp-creation-address stats store) ...)
+;;      (define (get-xrp-stats xrp-creation-address store) ...)
+;;      (define (store->choice-handler store) ...)
+;;      (define (set-choice-handler! store handler) ...)
+
+
+;;      (define (church-make-xrp address store xrp-name sample incr-stats decr-stats score init-stats hyperparams proposer support)
+;;        (let ((creation-address address))
+
+;;          ;;make an entry for the stats of this xrp, initialized to init-stats.
+;;          (set-xrp-stats! creation-address init-stats store)
+
+;;          ;;when the xrp is called, it calls the choice-handler with it's information and the current address.
+;;          ;;the choice handler returns the chosen value and updates the xrp-stats.
+;;          (lambda (address store . args)
+;;            ((store->choice-handler store) address store xrp-name creation-address sample incr-stats decr-stats score hyperparams proposer support))))
+
+;; ;;;handling random choices and (mh) state...
+     
+;;      ;;the trivial choice handler just samples from the prior, and maintains no state.
+;;      ;;the church top level installs this handler using the 'sample' special form.
+;;      (define (trivial-choice-handler address store xrp-name xrp-creation-address sample incr-stats decr-stats score hyperparams proposer support)
+;;        (let ((stats (get-xrp-stats xrp-creation-address))
+;;              (tmp (sample address store stats hyperparams args))
+;;              (value (first tmp))
+;;              (new-stats (second tmp))
+;;              (incr-score (third tmp)))
+;;          (set-xrp-stats! creation-address new-stats store)
+;;          value))
+         
+     
+;;      ;;the mh choice handler is more interesting: it maintains a database of random choices, and tries to re-use them...
+;;      (define (mh-choice-handler address store xrp-name xrp-creation-address sample incr-stats decr-stats score stats hyperparams proposer support)
+;;        (let ((stats (get-xrp-stats xrp-creation-address))
+;;              (tmp (if (existing choice?)
+                      
+;;                       (sample address store stats hyperparams args)))
+;;              (value (first tmp))
+;;              (new-stats (second tmp))
+;;              (incr-score (third tmp)))
+;;          (update-xrp-stats! creation-address new-stats store)
+;;          value))
+
+
+     
+;; ;;;for mcmc-preamble we must provide: counterfactual-update, make-initial-mcmc-state, mcmc-state->xrp-draws, mcmc-state->score, mcmc-state->query-value.
+
+
+
+
      
 
 ;;;

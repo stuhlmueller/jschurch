@@ -10,4 +10,4 @@
 (mh-query 10 100
           (define x (repeat 100 flip))
           x
-          (fold or false x))
+          (fold (lambda (x y) (or x y)) false x))

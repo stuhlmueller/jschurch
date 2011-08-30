@@ -83,6 +83,9 @@
 
 (define scheme-gensym gensym)
 
+(define true #t)
+(define false #f)
+
 (define first car)
 (define rest cdr)
 (define pair cons)
@@ -97,7 +100,9 @@
 (define (tenth lst) (list-ref lst 9))
 
 
-;; trie
+;;; trie
+;;provides: make-empty-trie, trie-insert, trie-lookup, trie-pop, trie-empty?, trie-size, trie->alist, trie-remove-all, alist->trie
+
  (define none 'none)
  
  ;; look for first element x that matches pred, replace with (update x)
@@ -243,6 +248,7 @@
                                 (replace (trie->children t)
                                          (lambda (b) (eq? (car b) (caadr path-remaining)))
                                          (lambda (b) (cons (car b) (loop (cdr path-remaining)))))))))))))
+;;;
 
 ;;for score gradients:
 (define (*with-score-gradient*) #f)

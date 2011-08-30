@@ -34,7 +34,7 @@ compilers = {
         "header" : "scheme-compilers/header-vicare.sc",
         "trailer" : "scheme-compilers/trailer-vicare.sc",
         "extension" : ".ss",
-        "runnable" : False },
+        "runnable" : True },
     "biwa" : {
         "header" : "scheme-compilers/header-biwa.sc",
         "trailer" : "scheme-compilers/trailer-biwa.sc",
