@@ -34,7 +34,7 @@ compilers = {
         "header" : "scheme-compilers/header-vicare.sc",
         "trailer" : "scheme-compilers/trailer-vicare.sc",
         "extension" : ".ss",
-        "runnable" : True },
+        "runnable" : False },
     "biwa" : {
         "header" : "scheme-compilers/header-biwa.sc",
         "trailer" : "scheme-compilers/trailer-biwa.sc",
@@ -43,7 +43,7 @@ compilers = {
     "scheme2js" : {
         "header" : "scheme-compilers/header-scheme2js.sc",
         "trailer" : "scheme-compilers/trailer-scheme2js.sc",
-        "extension" : ".ss",
+        "extension" : ".sc",
         "runnable" : False },
     }
 
@@ -145,7 +145,8 @@ Examples:
             settings["html_out_path"] = settings["in_path"] + ".html"
             settings["scheme2js_path"] = abspath(os.path.join(settings["bher_path"], "external/scheme2js/scheme2js.jar"))
             settings["scheme2js_runtime_path"] = abspath(os.path.join(settings["bher_path"], "external/scheme2js/runtime.js"))
-            call("java -jar '%(scheme2js_path)s' '%(out_path)s' -o '%(js_out_path)s'" % settings, verbose)
+            call("java -jar '%(scheme2js_path)s' '%(out_path)s' -o '%(js_out_path)s' -O1" % settings, verbose)
+            call("rm -f '%(out_path)s'" % settings, verbose)
             vprint("constructing html file ", verbose)
             call("""
 echo '<!DOCTYPE html>
