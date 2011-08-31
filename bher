@@ -146,7 +146,8 @@ Examples:
             settings["scheme2js_path"] = abspath(os.path.join(settings["bher_path"], "external/scheme2js/scheme2js.jar"))
             settings["scheme2js_runtime_path"] = abspath(os.path.join(settings["bher_path"], "external/scheme2js/runtime.js"))
             call("java -jar '%(scheme2js_path)s' '%(out_path)s' -o '%(js_out_path)s' -O1" % settings, verbose)
-            call("rm -f '%(out_path)s'" % settings, verbose)
+            if not keep:
+                call("rm -f '%(out_path)s'" % settings, verbose)
             vprint("constructing html file ", verbose)
             call("""
 echo '<!DOCTYPE html>

@@ -40,39 +40,16 @@
           (primitive-defs (map primitive-def (lset-difference eq? (filter church-symbol? free-variables) def-symbols))))
      (append external-defs primitive-defs special-defs)))
 
-
-;;;functions used to wrap up primitive forms.
  (define (prefix-church symb) (string->symbol (string-append "church-" (symbol->string symb))))
  (define (un-prefix-church symb) (if (church-symbol? symb)
                                      (string->symbol (list->string (drop (string->list (symbol->string symb)) 7)))
                                       symb))
  (define (church-symbol? symb) (and (< 7 (length (string->list (symbol->string symb))))
                                     (equal? "church-" (list->string (take (string->list (symbol->string symb)) 7)))))
- 
- (define (wrap-primitive symb)
-   (if *no-forcing*
-       `(lambda (address store . args) (apply ,symb args))
-       `(lambda (address store . args) (apply ,symb (map (lambda (a) (church-force address store a)) args)))))
- 
  (define (primitive-def symb)
-   `(define ,symb ,(wrap-primitive (un-prefix-church symb))))
-
- ;;;; this version can be used to specialize when the number of arguments is known in advance....
- ;; (define (wrap-primitive symb . nargs)
- ;;   (let* ((actual-args (if (null? nargs) 'args (repeat (first nargs) readable-gensym)))
- ;;          (arguments  `(address store . ,actual-args))
- ;;          (application (if (null? nargs)
- ;;                           (if *lazy*
- ;;                               `(apply ,symb (map (lambda (a) (church-force address store a)) args))
- ;;                               `(apply ,symb args))
- ;;                           (if *lazy*
- ;;                               `(,symb ,@(map (lambda (a) `(church-force address store ,a)) actual-args))
- ;;                               `(,symb ,@actual-args)))))
- ;;     `(lambda ,arguments ,application)))
-
-
- 
-
+   (if *no-forcing*
+       `(define ,symb (lambda (address store . args) (apply ,(un-prefix-church symb) args)))
+       `(define ,symb (lambda (address store . args) (apply ,(un-prefix-church symb) (map (lambda (a) (church-force address store a)) args))))))
 
 
 
@@ -107,10 +84,7 @@
      
      (define church-true #t)
      (define church-false #f)
-     ;(define church-pair ,(wrap-primitive 'cons))
-     ;(define church-first ,(wrap-primitive 'car))
-     ;(define church-rest ,(wrap-primitive 'cdr))
-     (define (church-or address store . args) (fold (lambda (x y) (or x y)) #f args)) ;;FIXME: better way to do this?
+     (define (church-or address store . args) (fold (lambda (x y) (or x y)) #f args))
      (define (church-and address store . args) (fold (lambda (x y) (and x y)) #t args))
 
      ;;provided for laziness and constraint prop:

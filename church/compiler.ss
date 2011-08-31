@@ -32,13 +32,13 @@
                             (load "xrp-preamble.church")
                             (load "mcmc-preamble.church")
                             ,@top-list))
-          (ds-sexpr (de-sugar-all church-sexpr))
+          (ds-sexpr (remove-dead (de-sugar-all church-sexpr))) ;;desugar and remove unused defs.
           (ds-sexpr (if (eq? #t lazy)
-                        (add-forcing ds-sexpr) ;;to make everything lazy, wrap church-sexpr with (lazify ..) before desugaring.
+                        (add-forcing ds-sexpr) ;;this supports lazy evaluation, by adding force at applications, etc.
                         ds-sexpr))
-          (primitive-symbols (delete-duplicates (free-variables ds-sexpr '())))
-          (primitive? (lambda (sym) (and (not (memq sym *threaded-primitives*))
-                                         (memq sym primitive-symbols))))
+          (primitive? (let ((primitive-symbols (delete-duplicates (free-variables ds-sexpr '()))))
+                        (lambda (sym) (and (not (memq sym *threaded-primitives*))
+                                           (memq sym primitive-symbols)))))
           (scexpr (addressing* ds-sexpr primitive?)))
      `( ,@(generate-header (delete-duplicates (free-variables scexpr '())) external-defs (eq? #t lazy))
         (define (church-main address store) ,scexpr))))
@@ -129,6 +129,28 @@
     ((symbol? sexpr) (if (memq sexpr bound-vars) '() (list sexpr)))
     (else '()) ))
 
+ ;;remove unused bindings from letrecs.
+ ;;would be great to do true dead code elimination, but this would require flow analysis.
+ (define (remove-dead sexpr)
+   (cond
+      ((quoted? sexpr) sexpr)
+      ((letrec? sexpr)
+       (let ((kept-bindings
+              (let loop ((bindings '())
+                         (unused-bindings-vars (map first (second sexpr)))
+                         (free-vars (free-variables (third sexpr) '())))
+                (let* ((new-binding-vars (lset-intersection eq? unused-bindings-vars free-vars)))
+                  (if (null? new-binding-vars)
+                      (filter (lambda (b) (memq (first b) bindings)) (second sexpr)) ;;keep the bindings that are used.
+                      (loop (append new-binding-vars bindings) ;;extended binding set
+                            (lset-difference eq? unused-bindings-vars new-binding-vars) ;;remaining binding vars
+                            (apply append (map (lambda (b) (free-variables (second (assoc b (second sexpr))) '())) new-binding-vars)))))))) ;;free vars of new bindings
+         
+         `(letrec ,(remove-dead kept-bindings)
+            ,(remove-dead (third sexpr)))))
+      (else (if (list? sexpr) (map remove-dead sexpr) sexpr)) ))
+
+ 
  
  ;;this supports lazy evaluation by adding force to appropriate places (must also add forcing to primitives via header).
  (define (add-forcing sexpr)
