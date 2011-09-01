@@ -1,0 +1,43 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja">
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />
+<title>JSSpec results</title>
+<link rel="stylesheet" type="text/css" href="JSSpec.css" />
+<script type="text/javascript" src="diff_match_patch.js"></script>
+<script type="text/javascript" src="JSSpec.js"></script>
+<script type="text/javascript" src="../test/unit.js"></script>
+</head>
+<body>
+
+<div id="div1">div tag sample</div>
+<div id="bs-console"></div>
+
+<script type="text/javascript">// <![CDATA[
+var loader_development = function(proc){
+  document.write("<script src='../src/development_loader.js'>" +
+    "BiwaScheme.register_tests();" +
+    "JSSpec.start_test();" +
+    "<\/script>");
+};
+
+var loader_production = function(proc){
+  document.write("<script src='../lib/biwascheme.js'>" +
+    '(js-eval "BiwaScheme.register_tests();' +
+    '          JSSpec.start_test();")' +
+    "<\/script>");
+};
+
+if (location.hash.match(/lib/)){
+  if(console) console.log("starting tests for lib/biwascheme.js");
+  loader_production();
+}
+else{
+  if(console) console.log("starting tests for src/*.js");
+  loader_development();
+}
+
+// ]]></script>
+</body>
+</html>
+<!-- vim:set ft=javascript: -->

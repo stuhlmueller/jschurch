@@ -6,12 +6,13 @@
 ;;the header includes:
 ;;  church-make-xrp
 ;;  church-apply, church-eval
-;;  mcmc code, including the query primitives assumed by the de-sugarring transform.
-;;  deterministic (non-higher-order) scheme primitives wrapped up into church- forms. (NOTE: should have a mechanism to provide additional primitives -- add external defs arg to generate-header.)
+;;  mcmc helper code.
+;;  deterministic (non-higher-order) scheme primitives wrapped up into church- forms. 
 
-;;this should generate scheme compatible with r4rs+srfi1 (some additional defines are needed for stalin, etc, that don't have srfis).
+;;this should generate scheme compatible with r4rs+srfi1.
 
-;;NOTE: assumes a bunch of random sampling/scoring primitives, which should be provided from GSL (eg. in our external/math-env.ss).
+;;NOTE: primitive symbols not otherwise defined are assumed to be provided by the target language. this include, for example, a bunch of random sampling/scoring functions that xrp-preamble will want.
+
 
 (library
  (church header)
@@ -23,54 +24,44 @@
          (church readable-scheme)
          )
 
- (define *storethreading* false)
- (define *lazy* false)
+ (define *no-forcing* true)
  (define *AD* true) ;;when AD is true, continuous XRP return values will be tapified.
-
- (define (prefix-church symb) (string->symbol (string-append "church-" (symbol->string symb))))
- (define (church-symbol? symb) (and (< 7 (length (string->list (symbol->string symb))))
-                                    (equal? "church-" (list->string (take (string->list (symbol->string symb)) 7)))))
- (define (un-prefix-church symb) (if (church-symbol? symb)
-                                     (string->symbol (list->string (drop (string->list (symbol->string symb)) 7)))
-                                     symb))
  
- (define (wrap-primitive symb . nargs)
-   (let* ((actual-args (if (null? nargs) 'args (repeat (first nargs) readable-gensym)))
-          (arguments  `(address store . ,actual-args))
-          (application (if (null? nargs)
-                           (if *lazy*
-                               `(apply ,symb (map (lambda (a) (church-force address store a)) args))
-                               `(apply ,symb args))
-                           (if *lazy*
-                               `(,symb ,@(map (lambda (a) `(church-force address store ,a)) actual-args))
-                               `(,symb ,@actual-args)))))
-     (if *storethreading*
-         `(lambda ,arguments (list ,application store))
-         `(lambda ,arguments ,application))))
- 
- (define (primitive-def symb)
-   `(define ,symb ,(wrap-primitive (un-prefix-church symb))))
-
- ;;any free "church-" variable in the program that isn't provided explicitly is assumed to be a scheme primitive, and a church- definition is generated for it.
- (define (generate-header storethreading lazy free-variables external-defs)
-   (set! *storethreading* storethreading)
-   (set! *lazy* lazy)
+ ;;the header is a list of definitions in the (target) scheme. it provides primitives, xrp handling, mh helpers, etc.
+ ;;any free "church-" variable in the program that isn't provided explicitly (by generate-special or by external defs)
+ ;;is assumed to be a scheme primitive, and a church- definition is generated for it.
+ ;;(free symbols that occur in operator position are assumed primitive, and won't have church- prefix.)
+ (define (generate-header free-variables external-defs lazy)
+   (set! *no-forcing* (not lazy)) 
    (let* ((special-defs (generate-special))
           (def-symbols (map (lambda (d) (if (pair? (second d)) (first (second d)) (second d)))
-                            (append special-defs external-defs))) ;;get defined symbols
-          (leftover-symbols (filter (lambda (v) (not (memq v def-symbols))) (filter church-symbol? (delete-duplicates free-variables))))
-          (primitive-defs (map (lambda (s) (primitive-def s)) leftover-symbols)))
+                            (append special-defs external-defs))) ;;get symbols defined by header and external fns.
+          ;;any remaining church- free variables is assumed to have an underlying primitive, package them up:
+          (primitive-defs (map primitive-def (lset-difference eq? (filter church-symbol? free-variables) def-symbols))))
      (append external-defs primitive-defs special-defs)))
+
+ (define (prefix-church symb) (string->symbol (string-append "church-" (symbol->string symb))))
+ (define (un-prefix-church symb) (if (church-symbol? symb)
+                                     (string->symbol (list->string (drop (string->list (symbol->string symb)) 7)))
+                                      symb))
+ (define (church-symbol? symb) (and (< 7 (length (string->list (symbol->string symb))))
+                                    (equal? "church-" (list->string (take (string->list (symbol->string symb)) 7)))))
+ (define (primitive-def symb)
+   (if *no-forcing*
+       `(define ,symb (lambda (address store . args) (apply ,(un-prefix-church symb) args)))
+       `(define ,symb (lambda (address store . args) (apply ,(un-prefix-church symb) (map (lambda (a) (church-force address store a)) args))))))
+
+
 
  (define (generate-special)
    `(
 ;;;
      ;;misc church primitives
      (define (church-apply address store proc args)
-       ,(if *lazy*
+       ,(if *no-forcing*
+            `(apply proc address store args)
             `(apply (church-force address store proc) address store (church-force address store args))
-            `(apply proc address store args)))
-     ;(define (church-eval address store sexpr env) (error 'eval "eval not implemented"))
+            ))
 
      ;; ;;requires compile, eval, and environment to be available from underlying scheme....
      ;; (define (church-eval addr store sexpr)
@@ -91,21 +82,67 @@
      ;;                      '(rnrs eval)  ))
      ;;         addr store))
      
-     (define (church-get-current-environment address store) (error 'gce "gce not implemented"))
      (define church-true #t)
      (define church-false #f)
-     (define church-pair ,(wrap-primitive 'cons 2))
-     (define church-first ,(wrap-primitive 'car 1))
-     (define church-rest ,(wrap-primitive 'cdr 1))
-     (define (church-or address store . args) (fold (lambda (x y) (or x y)) #f args)) ;;FIXME: better way to do this? ;;FIXME!! doesn't return store..
+     (define (church-or address store . args) (fold (lambda (x y) (or x y)) #f args))
      (define (church-and address store . args) (fold (lambda (x y) (and x y)) #t args))
 
-     (define (lev-dist) (error "lev-dist not implemented"))
-
-     ;;for laziness and constraint prop:
+     ;;provided for laziness and constraint prop:
      (define (church-force address store val) (if (and (pair? val) (eq? (car val) 'delayed))
                                                   (church-force address store ((cadr val) address store))
                                                   val))
+
+;; ;;;
+;;      (define (set-xrp-stats! xrp-creation-address stats store) ...)
+;;      (define (get-xrp-stats xrp-creation-address store) ...)
+;;      (define (store->choice-handler store) ...)
+;;      (define (set-choice-handler! store handler) ...)
+
+
+;;      (define (church-make-xrp address store xrp-name sample incr-stats decr-stats score init-stats hyperparams proposer support)
+;;        (let ((creation-address address))
+
+;;          ;;make an entry for the stats of this xrp, initialized to init-stats.
+;;          (set-xrp-stats! creation-address init-stats store)
+
+;;          ;;when the xrp is called, it calls the choice-handler with it's information and the current address.
+;;          ;;the choice handler returns the chosen value and updates the xrp-stats.
+;;          (lambda (address store . args)
+;;            ((store->choice-handler store) address store xrp-name creation-address sample incr-stats decr-stats score hyperparams proposer support))))
+
+;; ;;;handling random choices and (mh) state...
+     
+;;      ;;the trivial choice handler just samples from the prior, and maintains no state.
+;;      ;;the church top level installs this handler using the 'sample' special form.
+;;      (define (trivial-choice-handler address store xrp-name xrp-creation-address sample incr-stats decr-stats score hyperparams proposer support)
+;;        (let ((stats (get-xrp-stats xrp-creation-address))
+;;              (tmp (sample address store stats hyperparams args))
+;;              (value (first tmp))
+;;              (new-stats (second tmp))
+;;              (incr-score (third tmp)))
+;;          (set-xrp-stats! creation-address new-stats store)
+;;          value))
+         
+     
+;;      ;;the mh choice handler is more interesting: it maintains a database of random choices, and tries to re-use them...
+;;      (define (mh-choice-handler address store xrp-name xrp-creation-address sample incr-stats decr-stats score stats hyperparams proposer support)
+;;        (let ((stats (get-xrp-stats xrp-creation-address))
+;;              (tmp (if (existing choice?)
+                      
+;;                       (sample address store stats hyperparams args)))
+;;              (value (first tmp))
+;;              (new-stats (second tmp))
+;;              (incr-score (third tmp)))
+;;          (update-xrp-stats! creation-address new-stats store)
+;;          value))
+
+
+     
+;; ;;;for mcmc-preamble we must provide: counterfactual-update, make-initial-mcmc-state, mcmc-state->xrp-draws, mcmc-state->score, mcmc-state->query-value.
+
+
+
+
      
 
 ;;;
@@ -127,11 +164,9 @@
                                       (store->enumeration-flag store))
                           'foo))
 
-     (define (return-with-store store new-store value) ,(if *storethreading*
-                                                            '(list value new-store)
-                                                            '(begin (set-car! store (car new-store))
-                                                                    (set-cdr! store (cdr new-store))
-                                                                    value)))
+     (define (return-with-store store new-store value) (begin (set-car! store (car new-store))
+                                                               (set-cdr! store (cdr new-store))
+                                                               value))
 
      (define alist-insert
        (lambda (addbox address info)
@@ -252,12 +287,8 @@
                                                       value
                                                       xrp-name
                                                       (lambda (address store state)
-                                                        ,(if *storethreading*
-                                                             '(list (first
-                                                                     (church-apply (mcmc-state->address state) (mcmc-state->store state) proposer (list args value)))
-                                                                    store)
-                                                             '(let ((store (cons (first (mcmc-state->store state)) (cdr (mcmc-state->store state)))))
-                                                                (church-apply (mcmc-state->address state) store proposer (list args value)))))
+                                                        (let ((store (cons (first (mcmc-state->store state)) (cdr (mcmc-state->store state)))))
+                                                          (church-apply (mcmc-state->address state) store proposer (list args value))))
                                                       (cons (store->tick store) old-tick)
                                                       incr-score
                                                       support-vals))
@@ -277,7 +308,7 @@
        (define (mcmc-state->xrp-draws state) (store->xrp-draws (mcmc-state->store state)))
        (define (mcmc-state->score state)
          (if (not (eq? #t (first (second state))))
-             -inf.0 ;;enforce conditioner.
+             minus-infinity ;;enforce conditioner.
              (store->score (mcmc-state->store state))))
         ;;compute the gradient of the score of a trace-container wrt any tapified erp values.
          (define (mcmc-state->gradient state)
@@ -294,23 +325,16 @@
 
        ;;this assumes that nfqp returns a thunk, which is the delayed query value. we force (apply) the thunk here, using a copy of the store from the current state.
        (define (mcmc-state->query-value state)
-         ,(if *storethreading*
-              '(first (church-apply (mcmc-state->address state) (mcmc-state->store state) (cdr (second state)) '()))
-              '(let ((store (cons (first (mcmc-state->store state)) (cdr (mcmc-state->store state)))))
-                 (church-apply (mcmc-state->address state) store (cdr (second state)) '()))))
+         (let ((store (cons (first (mcmc-state->store state)) (cdr (mcmc-state->store state)))))
+                 (church-apply (mcmc-state->address state) store (cdr (second state)) '())))
 
        ;;this captures the current store/address and packages up an initial mcmc-state.
        (define (church-make-initial-mcmc-state address store)
-                                        ;(for-each display (list "capturing store, xrp-draws has length :" (length (store->xrp-draws store))
-                                        ;                        " xrp-stats: " (length (store->xrp-stats store)) "\n"))
-         ,(if *storethreading*
-              '(list (make-mcmc-state store 'init-val address) store)
-              '(make-mcmc-state (cons (first store) (cdr store)) 'init-val address)))
+         (make-mcmc-state (cons (first store) (cdr store)) 'init-val address))
 
        ;;this is like church-make-initial-mcmc-state, but flags the created state to init new xrp-draws at left-most element of support.
        ;;clears the xrp-draws since it is meant to happen when we begin enumeration (so none of the xrp-draws in store can be relevant).
        (define (church-make-initial-enumeration-state address store)
-         ;;FIXME: storethreading.
          (make-mcmc-state (make-store '() (store->xrp-stats store) (store->score store) (store->tick store) #t)
                           'init-val address))
 
@@ -340,10 +364,7 @@
                                           ))
                 ;;application of the nfqp happens with interv-store, which is a fresh pair, so won't mutate original state.
                 ;;after application the store must be captured and put into the mcmc-state.
-                (ret ,(if *storethreading*
-                          '(church-apply (mcmc-state->address state) interv-store nfqp '()) ;;return is already list of value + store.
-                          '(list (church-apply (mcmc-state->address state) interv-store nfqp '()) interv-store) ;;capture store, which may have been mutated.
-                          ))
+                (ret (list (church-apply (mcmc-state->address state) interv-store nfqp '()) interv-store)) ;;capture store, which may have been mutated.
                 (value (first ret))
                 (new-store (second ret))
                 (ret2 (if (store->enumeration-flag new-store)

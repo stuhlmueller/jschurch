@@ -71,13 +71,13 @@
 ; Checks where everything in a list is true.
 ; @param lst the list
 ; @return Returns false if everything in the list is false and otherwise returns the last element of the list.
-(define (all lst) (apply and lst)) ;used to be (fold and true lst))
+(define (all lst) (apply and lst)) ;old:  (fold (lambda (x y) (and x y)) true lst))  
 
 ; @desc
 ; Checks whether anything in the list is true.
 ; @param lst the list
 ; @return Returns false if everything in the list is false and otherwise returns the first non-false element.
-(define (any lst) (apply or lst));(fold or false lst))
+(define (any lst) (apply or lst)) ;old:  (fold (lambda (x y) (or x y)) false lst))    
 
 
 ; @desc
@@ -268,16 +268,16 @@
         (crps (mem (lambda (args) (make-PYP a b)))))
     (lambda argsin (augmented-proc argsin ((crps argsin))))))
 
-; @desc
-; Noisy list comparison using Levenshtein distance. Returns true when (flip coupling^lev-distance). When coupling is 0 then perfect match is required. When coupling is 1, then it always returns true.
-; @param list1 The first list. 
-; @param list2 The second list
-; @param coupling The coupling parameter in [0,1] which states how serious you are about equality. If it is 0 then this is just (equal? list1 list2), when it is 1 always retrurn true.
-; @returns true/false
-(define (noisy-lev-list-equal? list1 list2 coupling)
-  (if (= 0.0 coupling)
-      (equal? list1 list2)
-      (flip (expt coupling (lev-dist list1 list2)))))
+;; ; @desc
+;; ; Noisy list comparison using Levenshtein distance. Returns true when (flip coupling^lev-distance). When coupling is 0 then perfect match is required. When coupling is 1, then it always returns true.
+;; ; @param list1 The first list. 
+;; ; @param list2 The second list
+;; ; @param coupling The coupling parameter in [0,1] which states how serious you are about equality. If it is 0 then this is just (equal? list1 list2), when it is 1 always retrurn true.
+;; ; @returns true/false
+;; (define (noisy-lev-list-equal? list1 list2 coupling)
+;;   (if (= 0.0 coupling)
+;;       (equal? list1 list2)
+;;       (flip (expt coupling (lev-dist list1 list2)))))
 
 
 ; @desc

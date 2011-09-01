@@ -8,6 +8,11 @@
 
 (define discrete-pdf #f)
 (define discrete-sampler #f)
+
+(define infinity +inf.0)
+(define minus-infinity -inf.0)
+(define nan +nan.0)
+
 (define pi #f)
 (define logistic #f)
 (define lnfact #f)
@@ -44,6 +49,22 @@
     (if (null? args)
 	'()
 	(recur args))))
+
+(define (make-list len . maybe-elt)
+  (let ((elt (cond ((null? maybe-elt) #f) ; Default value
+		   ((null? (cdr maybe-elt)) (car maybe-elt))
+		   (else (error "Too many arguments to MAKE-LIST"
+				(cons len maybe-elt))))))
+    (do ((i len (- i 1))
+	 (ans '() (cons elt ans)))
+	((<= i 0) ans))))
+
+;; (define (make-list len . maybe-elt)
+;;   (let ((elt (if ((null? maybe-elt) #f) ; Default value
+;;                  (car maybe-elt))))
+;;     (let loop ((i len)
+;;                (lst '()))
+;;       (if (<= i 0) lst (loop (- i 1) (cons elt lst))))))
 
 ;; right fold
 (define (fold f base xs) 

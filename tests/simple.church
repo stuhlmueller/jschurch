@@ -1,0 +1,13 @@
+
+
+(mh-query 10 100
+          (define x (flip))
+          (define y (flip))
+          (list x y)
+          (or x y))
+
+
+(mh-query 10 100
+          (define x (repeat 100 flip))
+          x
+          (fold (lambda (x y) (or x y)) false x))

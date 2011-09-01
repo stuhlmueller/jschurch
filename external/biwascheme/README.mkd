@@ -1,0 +1,136 @@
+BiwaScheme
+==========
+
+BiwaScheme is a Scheme interpreter written in JavaScript.
+
+Works with web browsers and Node.js.
+
+Demos
+-----
+
+see [http://www.biwascheme.org/](http://www.biwascheme.org/)
+
+Download
+========
+
+* [http://www.biwascheme.org/repos/lib/biwascheme.js](http://www.biwascheme.org/repos/lib/biwascheme.js) (release version)
+
+How to use
+==========
+
+Just load biwascheme.js and write Scheme code.
+
+    <!DOCTYPE html>
+    <html>
+    <body>
+    
+    <div id="bs-console"></div>
+    
+    <script src="biwascheme.js">
+    (display "hello, world!")
+    </script>
+    
+    </body>
+    </html>
+
+How to use with node.js to run a biwa script
+--------------------------------------------
+
+1. $ npm install optparse
+2. create a file a.scm:
+
+    (display "Hello, world!")
+    (newline)
+
+3. $ node bin/biwas a.scm
+
+How to use from inside node.js as a module
+------------------------------------------
+
+1. $ npm install biwascheme
+2. create a file a.scm:
+
+    (display "Hello, world!")
+    (newline)
+
+3. create a file server.js:
+
+    var BiwaScheme = require("biwascheme").BiwaScheme;
+    BiwaScheme.run("a.scm");
+
+4. $ node server.js
+
+Files
+=====
+
+* lib/biwascheme.js : The latest release version, uncompressed
+* lib/biwascheme-min.js : The latest release version, compressed
+* demo/
+  * Demos
+* src/
+  * system/
+    * Source code of the interpreter
+  * library/
+    * Built-in library functions
+* test/
+  * Unit tests
+* tuplespace/
+  * (experimental) TupleSpace implemented in Scheme
+* website/
+  * HTMLs and CSS of www.biwascheme.org
+
+Building biwascheme.js
+----------------------
+
+Make compiles src/\*.js into lib/biwascheme.js.
+
+    $ make
+
+Prerequisites:
+
+* make
+* sed
+* Java (to run YUI Compressor)
+
+Development
+===========
+
+Repository: https://github.com/yhara/biwascheme
+
+How to release
+--------------
+
+1. Edit History.txt
+2. Edit VERSION
+3. $ make -B
+4. Commit generated files
+5. $ git tag x.y.z
+6. Push changes to github (with --tags)
+7. Update website ($ git pull)
+
+License
+=======
+
+MIT-LICENSE
+
+Acknowledgements
+================
+
+* Kent Dyvbig, Three implementation models for scheme
+  * http://www.cs.indiana.edu/~dyb/pubs/3imp.pdf
+
+* jsScheme
+  * http://alex.ability.ru/scheme.html (inavailable)
+
+* YUI Compressor (bin/yuicompressor-2.4.2.jar)
+  * http://developer.yahoo.com/yui/compressor/
+
+* ExplorerCanvas (demo/excanvas.js)
+  * http://excanvas.sourceforge.net/
+
+Contact
+=======
+
+https://github.com/yhara/biwascheme
+
+Yutaka HARA (yhara) yutaka.hara.gmail.com
