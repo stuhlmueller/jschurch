@@ -137,34 +137,18 @@ Examples:
             if not keep:
                 vprint("removing compiled file", verbose)
                 call("rm -f '%(out_path)s'" % settings, verbose)
-
-
+        
         if compiler=="scheme2js":
             vprint("compiling scheme to js via scheme2js ", verbose)
             settings["js_out_path"] = settings["in_path"] + ".js"
-            settings["html_out_path"] = settings["in_path"] + ".html"
             settings["scheme2js_path"] = abspath(os.path.join(settings["bher_path"], "external/scheme2js/scheme2js.jar"))
             settings["scheme2js_runtime_path"] = abspath(os.path.join(settings["bher_path"], "external/scheme2js/runtime.js"))
             call("java -jar '%(scheme2js_path)s' '%(out_path)s' -o '%(js_out_path)s' -O1" % settings, verbose)
             if not keep:
                 call("rm -f '%(out_path)s'" % settings, verbose)
             vprint("constructing html file ", verbose)
-            call("""
-echo '<!DOCTYPE html>
-<html>
-<body>
-
-<div id="console"></div>
-
-<script type="text/javascript" src="%(scheme2js_runtime_path)s">
-</script>
-
-<script type="text/javascript" src="%(js_out_path)s">
-</script>
-
-</body>
-</html> ' > '%(html_out_path)s'
-""" % settings, verbose)
-
-        
-
+            scheme2js_template = open("scheme-compilers/template-scheme2js.html").read()            
+            scheme2js_html = scheme2js_template % settings
+            f = open(settings["in_path"] + ".html", "w")
+            f.write(scheme2js_html)
+            f.close()
