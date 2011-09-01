@@ -133,22 +133,23 @@
  ;;would be great to do true dead code elimination, but this would require flow analysis.
  (define (remove-dead sexpr)
    (cond
-      ((quoted? sexpr) sexpr)
-      ((letrec? sexpr)
-       (let ((kept-bindings
-              (let loop ((bindings '())
-                         (unused-bindings-vars (map first (second sexpr)))
-                         (free-vars (free-variables (third sexpr) '())))
-                (let* ((new-binding-vars (lset-intersection eq? unused-bindings-vars free-vars)))
-                  (if (null? new-binding-vars)
-                      (filter (lambda (b) (memq (first b) bindings)) (second sexpr)) ;;keep the bindings that are used.
-                      (loop (append new-binding-vars bindings) ;;extended binding set
-                            (lset-difference eq? unused-bindings-vars new-binding-vars) ;;remaining binding vars
-                            (apply append (map (lambda (b) (free-variables (second (assoc b (second sexpr))) '())) new-binding-vars)))))))) ;;free vars of new bindings
-         
-         `(letrec ,(remove-dead kept-bindings)
-            ,(remove-dead (third sexpr)))))
-      (else (if (list? sexpr) (map remove-dead sexpr) sexpr)) ))
+    ((quoted? sexpr) sexpr)
+    ((letrec? sexpr)
+     (let ((kept-bindings
+            (let loop ((bindings '())
+                       (unused-bindings-vars (map first (second sexpr)))
+                       (free-vars (free-variables (third sexpr) '())))
+              (let* ((new-binding-vars (lset-intersection eq? unused-bindings-vars free-vars)))
+                (if (null? new-binding-vars)
+                    (filter (lambda (b) (memq (first b) bindings)) (second sexpr)) ;;keep the bindings that are used.
+                    (loop (append new-binding-vars bindings) ;;extended binding set
+                          (lset-difference eq? unused-bindings-vars new-binding-vars) ;;remaining binding vars
+                          (apply append (map (lambda (b) (free-variables (second (assoc b (second sexpr))) '())) new-binding-vars)))))))) ;;free vars of new bindings
+       
+       `(letrec ,(remove-dead kept-bindings)
+          ,(remove-dead (third sexpr)))))
+    ((list? sexpr) (map remove-dead sexpr))
+    (else sexpr)))
 
  
  
