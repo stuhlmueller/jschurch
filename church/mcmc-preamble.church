@@ -9,8 +9,7 @@
 ;;;kernels (mcmc transition distributions) and proposal distributions
 
 (define (proposable-xrps state proposable?)
-  (filter-map (lambda (v) (if (proposable? (rest v)) (rest v) #f))
-              (addbox->alist (mcmc-state->xrp-draws state))))
+  (filter proposable? (addbox->values (mcmc-state->xrp-draws state))))
 
 (define (selective-proposal-distribution state normal-form-proc proposable?)
   (if (addbox-empty? (mcmc-state->xrp-draws state))
@@ -18,7 +17,7 @@
       (let ((proposal-xrps (proposable-xrps state proposable?)))
         (if (null? proposal-xrps)
             (list 0.0 state)
-            (let* ((chosen-xrp (uniform-draw proposal-xrps)) ;; xrp-draws is an addbox, so address is first.
+            (let* ((chosen-xrp (uniform-draw proposal-xrps))
                    (ret1 ((xrp-draw-proposer chosen-xrp) state))
                    (proposed-val (first ret1))
                    (proposal-fw-score (second ret1))
@@ -307,14 +306,13 @@
                   hamiltonian-score))
 
 (define (momentum-prior state)
-  (fold (lambda (addr/draw momenta)
-          (if (continuous-xrp-draw? (rest addr/draw))
-              (pair (pair (first addr/draw)
-                          (sample-gaussian 0.0 1.0))
+  (fold (lambda (draw momenta)
+          (if (continuous-xrp-draw? draw)
+              (pair (sample-gaussian 0.0 1.0)
                     momenta)
               momenta))
         '()
-        (addbox->alist (mcmc-state->xrp-draws state))))
+        (addbox->values (mcmc-state->xrp-draws state))))
 
 ;; Generate appropriate momenta from the momentum prior (this is
 ;; secretly a kernel on momenta). Then apply leapfrog kernel, return
