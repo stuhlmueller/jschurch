@@ -34,15 +34,11 @@
   
 ;;FIXME!! this works badly... need constraint prop to do this right.
 (define (rejection-initializer normal-form-proc)
-  (let ((proposal-state (first (counterfactual-update (make-initial-mcmc-state) normal-form-proc)))) ;;don't care about bw/fw for init.
-    (if (= -inf.0 (mcmc-state->score proposal-state))
-        (begin (when verbose-init
-                  (display "annealing-initializer: failed, restarting at top ...\n"))
-               (rejection-initializer normal-form-proc))
-        (begin
-                (when verbose-init
-                      (display "annealing-initializer: succeeded!\n"))
-                proposal-state))))
+  (let loop ()
+    (let ((rejectioninit-proposal-state (first (counterfactual-update (make-initial-mcmc-state) normal-form-proc))))
+      (if (= -inf.0 (mcmc-state->score rejectioninit-proposal-state))
+          (loop) ;;don't care about bw/fw for init.
+          rejectioninit-proposal-state))))
 
 (define verbose-init #f)
 
@@ -96,6 +92,7 @@
            (old-p (scorer state))
            (new-p (scorer proposal-state))
            (accept (log-flip (min 0.0 (+ (- new-p old-p) bw/fw))))
+           ;(dummy (for-each display (list "new p  " new-p " old-p  " old-p " bw/fw  " bw/fw "        \n")))
            ;(dummy (if accept (display "--accept--\n") (display "--reject--\n")))
            (dummy (reset-store-xrp-draws))) ;;FIXME!! this is to avoid accumulating xrp-draws...
       (if accept

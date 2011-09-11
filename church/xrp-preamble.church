@@ -57,9 +57,9 @@
                                             discrete-sampler
                                             (lambda (args val)
                                               (if (>= val (length (first args)))
-                                                  -inf.0
+                                                  minus-infinity
                                                   (let ((p (discrete-pdf (first args) val)))
-                                                    (if (> p 0) (log p) -inf.0))))
+                                                    (if (> p 0) (log p) minus-infinity))))
                                             '() ;;proposer
                                             (lambda (args) (iota (length (first args))))
                                             ))

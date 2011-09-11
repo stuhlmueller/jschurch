@@ -31,18 +31,21 @@ def parse_params(params):
 
 compilers = {
     "vicare" : {
-        "header" : "scheme-compilers/header-vicare.sc",
-        "trailer" : "scheme-compilers/trailer-vicare.sc",
+        #"header" : "scheme-compilers/header-vicare.sc",
+        #"trailer" : "scheme-compilers/trailer-vicare.sc",
+        "template" : "scheme-compilers/vicare-template.sc",
         "extension" : ".ss",
         "runnable" : True },
     "biwa" : {
-        "header" : "scheme-compilers/header-biwa.sc",
-        "trailer" : "scheme-compilers/trailer-biwa.sc",
+        #"header" : "scheme-compilers/header-biwa.sc",
+        #"trailer" : "scheme-compilers/trailer-biwa.sc",
+        "template" : "scheme-compilers/biwa-template.sc",
         "extension" : ".html",
         "runnable" : False },
     "scheme2js" : {
-        "header" : "scheme-compilers/header-scheme2js.sc",
-        "trailer" : "scheme-compilers/trailer-scheme2js.sc",
+        #"header" : "scheme-compilers/header-scheme2js.sc",
+        #"trailer" : "scheme-compilers/trailer-scheme2js.sc",
+        "template" : "scheme-compilers/scheme2js-template.sc",
         "extension" : ".sc",
         "runnable" : False },
     }
@@ -83,8 +86,9 @@ Examples:
     settings = {
         "bher_path" : bher_path,
         "in_path" : abspath(file),
-        "header_path" : abspath(os.path.join(bher_path, compilers[compiler]["header"])),
-        "trailer_path" : abspath(os.path.join(bher_path, compilers[compiler]["trailer"])),
+        ##"header_path" : abspath(os.path.join(bher_path, compilers[compiler]["header"])),
+        ##"trailer_path" : abspath(os.path.join(bher_path, compilers[compiler]["trailer"])),
+        "template_path" : abspath(os.path.join(bher_path, compilers[compiler]["template"])),
         "compiler" : abspath(os.path.join(bher_path, "church/church-compiler.ss")),
         "debug" : debug and "--debug" or "",
         "pretty" : pretty and "T" or "F",
@@ -116,12 +120,18 @@ Examples:
         vprint("compiling church->scheme", verbose)
         call(("cd '%(bher_path)s' && vicare %(debug)s --r6rs-script '%(compiler)s' " +
               "'%(in_path)s.tmp' '%(out_path)s.tmp' '%(ext)s' %(pretty)s") % settings, verbose)
+        settings["churchprogram"] = open("%(out_path)s.tmp" % settings).read()
         call("rm -f '%(in_path)s.tmp'" % settings, verbose, allow_fail=True)
-        
-        vprint("adding compiler-specific header & footer", verbose)
-        call(("cat '%(header_path)s' '%(out_path)s.tmp' '%(trailer_path)s' " +
-              "> '%(out_path)s'") % settings, verbose)
         call("rm -f '%(out_path)s.tmp'" % settings, verbose, allow_fail=True)
+        
+        ## vprint("adding compiler-specific header & footer", verbose)
+        ## call(("cat '%(header_path)s' '%(out_path)s.tmp' '%(trailer_path)s' " +
+        ##       "> '%(out_path)s'") % settings, verbose)
+        ## call("rm -f '%(out_path)s.tmp'" % settings, verbose, allow_fail=True)
+
+        vprint("wrapping with compiler-specific template", verbose)
+        template = open(settings["template_path"]).read()
+        open(settings["out_path"], "w").write(template % settings)
 
         if compilers[compiler]["runnable"]:
             vprint("running generated scheme ", verbose)

@@ -103,16 +103,16 @@
             error-tolerance
             "random, no query" )
 
-(check-test (repeat runs
-                    (lambda ()
-                      (mh-query samples lag
-                                (define a (/ 1 1000))
-                                a
-                                (flip a) )))
-            (lambda (b) b)
-            (/ 1 1000)
-            0.0 ;;error-tolerance
-            "setting a flip" )
+;; (check-test (repeat runs
+;;                     (lambda ()
+;;                       (mh-query samples lag
+;;                                 (define a (/ 1 1000))
+;;                                 a
+;;                                 (flip a) )))
+;;             (lambda (b) b)
+;;             (/ 1 1000)
+;;             0.0 ;;error-tolerance
+;;             "setting a flip" )
 
 ;; (test-mh samples lag runs
 ;;         '( (define a (if (flip) 0 0.5))

@@ -41,7 +41,7 @@
 
  ;(church readable-scheme)
 
- (church trie)
+ ;(church trie)
 
  (church compiler)
  (rnrs eval)
@@ -66,3 +66,13 @@
 (define pair cons)
 (define true #t)
 (define false #f)
+
+%(churchprogram)s
+
+;;seed the random number generator
+(randomize-rng)
+
+(display
+(church-main '(top) (make-empty-store))
+) (newline)
+;;done

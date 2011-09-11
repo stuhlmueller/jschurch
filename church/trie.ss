@@ -27,221 +27,58 @@
          ;(only (vicare) pretty-print)
          )
 
-;;;non-functional trie
-;;provides: make-empty-trie, copy-trie, trie-insert, trie-lookup, trie-update, trie->values, alist->trie
+     (define none 'none)
 
-(define none 'none)
+     (define (make-empty-trie)
+       (make-trie none '()))
 
-(define (make-empty-trie)
-  (make-trie none '()))
+     ;; children is a list [(key-part . trie) ...]
+     (define (make-trie val children)
+       (pair val children))
 
-;; children is a list [(key-part . trie) ...]
-(define (make-trie val children)
-  (pair val children))
+     (define trie->val car)
 
-(define trie->val car)
+     (define trie->children cdr)
 
-(define trie->children cdr)
+     (define (trie-empty? trie)
+       (null? (trie->children trie)))
 
-(define (trie->values trie)
-  (define vals '())
-  (walk-trie trie (lambda (v) (set! vals (cons v vals))))
-  vals)
+     (define (trie->values trie)
+       (define vals '())
+       (walk-trie trie (lambda (v) (set! vals (cons v vals))))
+       vals)
 
-;;apply fn to all the leaves of trie.
-(define (walk-trie trie fn)
-  (if (null? (trie->children trie))
-      (fn (trie->val trie))
-      (map (lambda (c) (walk-trie (cdr c) fn)) (trie->children trie))))
+     ;;apply fn to all the leaves of trie.
+     (define (walk-trie trie fn)
+       (if (not (eq? 'none (trie->val trie)));(null? (trie->children trie))
+           (fn (trie->val trie))
+           (map (lambda (c) (walk-trie (cdr c) fn)) (trie->children trie))))
 
-(define (alist->trie alist)
-  (if (null? alist)
-      (make-empty-trie)
-      (trie-insert (alist->trie (cdr alist)) (caar alist) (cdar alist))))
+     (define (alist->trie alist)
+       (if (null? alist)
+           (make-empty-trie)
+           (trie-insert (alist->trie (cdr alist)) (caar alist) (cdar alist))))
 
-;;walk trie, making new pairs.
-(define (copy-trie trie)
-  (make-trie (trie->val trie) (map (lambda (k-t) (cons (car k-t) (copy-trie (cdr k-t)))) (trie->children trie))))
+     ;;walk trie, making new pairs.
+     (define (copy-trie trie)
+       (make-trie (trie->val trie) (map (lambda (k-t) (cons (car k-t) (copy-trie (cdr k-t)))) (trie->children trie))))
 
-;; overwrites existing value if any
-(define (trie-insert trie key val)
-  (if (null? key)
-      (set-car! trie val)
-      (let ((sub-trie (assoc (car key) (trie->children trie))))
-        (if (eq? #f sub-trie)
-            (set-cdr! trie (cons (cons (car key) (trie-insert (make-empty-trie) (cdr key) val))
-                                 (trie->children trie)))
-            (trie-insert (cdr sub-trie) (cdr key) val))))
-  trie)
-
-(define (trie-lookup trie key)
-  (if (null? key)
-      (trie->val trie)
-      (let ((sub-trie (assoc (car key) (trie->children trie))))
-        (if (eq? #f sub-trie)
-            (error "there should be a path to the val" (list key trie) "trie-lookup")
-            (trie-lookup (cdr sub-trie) (cdr key))))))
-      
-(define (trie-update trie key fn)
-  (if (null? key)
-      (set-car! trie (fn (trie->val trie)))
-      (let ((sub-trie (assoc (car key) (trie->children trie))))
-        (if (eq? #f sub-trie)
-            (set-cdr! trie (cons (cons (car key) (trie-update (make-empty-trie) (cdr key) fn))
-                                 (trie->children trie)))
-            (trie-update (cdr sub-trie) (cdr key) fn))))
-  trie)
-
-
-;;;old functional trie
-
- 
- ;; (define none 'none)
- 
- ;; ;; look for first element x that matches pred, replace with (update x)
- ;; (define (replace lst pred update)
- ;;   (if (null? lst)
- ;;       '()
- ;;       (if (pred (car lst))
- ;;           (cons (update (car lst))
- ;;                 (cdr lst))
- ;;           (cons (car lst)
- ;;                 (replace (cdr lst) pred update)))))
-
- ;; (define (make-empty-trie)
- ;;   (make-trie none '()))
-
- ;; (define (trie-empty? trie)
- ;;   (and (eq? (trie->val trie) none)
- ;;        (null? (trie->children trie))))
-
- ;; (define (copy-trie trie) trie)
-
- ;; ;; children is a list [(key-part . trie) ...]
- ;; (define (make-trie val children)
- ;;   (pair val children))
-
- ;; (define trie->val car)
-
- ;; (define trie->children cdr)
-
- ;; (define (trie->alist trie)
- ;;   (define (%trie->alist trie path)
- ;;     (let ([child-vals (apply append
- ;;                              (map (lambda (b) (%trie->alist (cdr b) (cons (car b) path)))
- ;;                                   (trie->children trie)))])
- ;;       (if (eq? (trie->val trie) none)
- ;;           child-vals
- ;;           (cons (cons (reverse path) (trie->val trie))
- ;;                 child-vals))))
- ;;   (%trie->alist trie '()))
-
- ;; (define (trie-size trie)
- ;;   (+ (if (eq? (trie->val trie) none) 0 1)
- ;;      (apply + (map (lambda (b) (trie-size (cdr b)))
- ;;                    (trie->children trie)))))
-
- ;; (define (alist->trie alist)
- ;;   (let loop ([trie (make-empty-trie)]
- ;;              [to-insert alist])
- ;;     (if (null? to-insert)
- ;;         trie
- ;;         (loop (trie-insert trie (caar to-insert) (cdar to-insert))
- ;;               (cdr to-insert)))))
-
- ;; ;; overwrites existing value if any
- ;; (define (trie-insert trie key val)
- ;;   (if (null? key)
- ;;       (make-trie val
- ;;                  (trie->children trie))
- ;;       (make-trie (trie->val trie)
- ;;                  (trie-insert* (trie->children trie) key val))))
- 
- ;; ;; assumes that only one child matches key
- ;; (define (trie-insert* bindings key val)
- ;;   (let ([v (assoc (car key) bindings)])
- ;;     (if (eq? v #f)
- ;;         ;; build fresh subtree
- ;;         (cons (cons (car key)
- ;;                     (trie-insert (make-empty-trie) (cdr key) val))
- ;;               bindings)
- ;;         ;; insert into existing subtree
- ;;         (replace bindings
- ;;                  (lambda (b) (equal? (car b) (car key)))
- ;;                  (lambda (b) (cons (car b) (trie-insert (cdr b) (cdr key) val)))))))
-
- ;; (define (trie-lookup trie key)
- ;;   (if (null? key)
- ;;       (trie->val trie)
- ;;       (let ([b (assoc (car key)
- ;;                       (trie->children trie))])
- ;;         (if (eq? b #f)
- ;;             #f
- ;;             (trie-lookup (cdr b) (cdr key))))))
-
- ;; (define (trie-remove-all trie keys)
- ;;   (if (null? keys)
- ;;       trie
- ;;       (trie-remove-all (cdr (trie-pop trie (car keys)))
- ;;                        (cdr keys))))
-
- ;; ;; returns (val . list-of-nodes-along-path) if key is found, otherwise #f
- ;; (define (trie-lookup+reverse-path trie key path)
- ;;   (if (null? key)
- ;;       (cons (trie->val trie)
- ;;             path)
- ;;       (let ([b (assoc (car key)
- ;;                       (trie->children trie))])
- ;;         (if (eq? b #f)
- ;;             #f
- ;;             (trie-lookup+reverse-path (cdr b) (cdr key) (cons b path))))))
- 
- ;; ;; if key in trie, return (val . new-trie)
- ;; ;; otherwise, return (#f . trie)
- ;; ;; new-trie does not have any unnecessary nodes
- ;; (define (trie-pop trie key)
- ;;   (let ([val/reverse-path (trie-lookup+reverse-path trie key '())])
- ;;     (if (eq? val/reverse-path #f)
- ;;         (cons #f trie)
- ;;         (cons (car val/reverse-path)
- ;;               (trie-remove-path trie (cdr val/reverse-path))))))
-
- ;; ;; search path from back to front, then return path from front until
- ;; ;; (and including) place where pred hit
- ;; ;; (9 8 7 6 5 4 3 2 1)
- ;; ;; don't check first item
- ;; (define (path-upto reverse-path pred)
- ;;   (let loop ([p reverse-path])
- ;;     (if (null? p)
- ;;         '()
- ;;         (if (null? (cdr p)) 
- ;;             '()
- ;;             (if (pred (cadr p))
- ;;                 (reverse p)
- ;;                 (loop (cdr p)))))))
-
- ;; ;; strategy:
- ;; ;; on the way down, accumulate list of all nodes+parents along the way
- ;; ;; find the first node that has only a single child
- ;; ;; replace this node with childless node, recursively replace children up to root
- ;; (define (trie-remove-path trie reverse-path)
- ;;   (if (not (null? (trie->children (cdar reverse-path))))
- ;;       (trie-insert trie (reverse (map car reverse-path)) none)
- ;;       (let* ([path-to-divergence
- ;;               (path-upto (reverse (cons (cons 'no-key trie) (reverse reverse-path))) ;; FIXME!!
- ;;                          (lambda (b) (or (> (length (trie->children (cdr b))) 1)
- ;;                                     (not (eq? (trie->val (cdr b)) #f)))))]
- ;;              [path-to-divergence (if (null? path-to-divergence) (list (cons 'no-key trie)) path-to-divergence)])
- ;;         (let loop ([path-remaining path-to-divergence])
- ;;           (let* ([t (cdar path-remaining)])
- ;;             (make-trie (trie->val t)
- ;;                        (if (null? (cdr path-remaining))
- ;;                            '()
- ;;                            (if (null? (cddr path-remaining))
- ;;                                (filter (lambda (b) (not (eq? (car b) (caadr path-remaining))))
- ;;                                        (trie->children t))
- ;;                                (replace (trie->children t)
- ;;                                         (lambda (b) (eq? (car b) (caadr path-remaining)))
- ;;                                         (lambda (b) (cons (car b) (loop (cdr path-remaining)))))))))))))
+     (define (trie-insert trie key val) (trie-update trie key (lambda (v) val)))
+     (define (trie-lookup trie key)
+       (define val 'none)
+       (trie-update trie key (lambda (v) (set! val v) v))
+       val)
+     (define (trie-update trie key fn)
+       (let loop ((trie trie)
+                  (key key))
+         (if (null? key)
+             (set-car! trie (fn (trie->val trie)))
+             (let* ((entry (assoc (car key) (trie->children trie)))
+                    (sub-trie (if (eq? #f entry)
+                                  (let ((new-child (make-empty-trie)))
+                                    (set-cdr! trie (cons (cons (car key) new-child) (trie->children trie)))
+                                    new-child)
+                                  (cdr entry))))
+               (loop sub-trie (cdr key))))))
 
  )
