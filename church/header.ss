@@ -219,11 +219,12 @@
                                 (let* ((dec (decr-stats address store old-value (car (read-addbox (store->xrp-stats store) xrp-address)) hyperparams operands))
                                        (decstats (second dec))
                                        (decscore (third dec))
-                                       (inc (sample address store decstats hyperparams operands))
+                                       (sandbox-store (cons (make-addbox) (cdr store)));;FIXME: this is a hack to need to isolate random choices in sampler from MH.
+                                       (inc (sample address sandbox-store decstats hyperparams operands))
                                        (proposal-value (first inc))
                                        (incscore (third inc)))
                                   (list proposal-value incscore decscore)))
-                              proposer)))
+                              proposer))) ;;FIXME!! need to isolate provided proposer from MH...
            
            ;;the xrp itself: we update the xrp-draw at call address and return the new value.
            (lambda (address store . args)
@@ -237,10 +238,11 @@
                                   (begin (set! new-val (xrp-draw-value xrp-draw))
                                          xrp-draw)
                                   (let* ((stats (car (read-addbox (store->xrp-stats store) xrp-address))) ;;FIXME: should only need to find the stats once, then do mutable update...
-                                         (support-vals (if (null? support) '() (support address store stats hyperparams args)))
+                                         (support-vals (if (null? support) '() (support address store stats hyperparams args))) 
+                                         (sandbox-store (cons (make-addbox) (cdr store)));;FIXME: this is a hack to need to isolate random choices in sampler from MH.
                                          (tmp (if (eq? trienone xrp-draw)
-                                                  (sample address store stats hyperparams args) ;;FIXME!! need to isolate random choices in sampler from MH.
-                                                  (incr-stats address store (xrp-draw-value xrp-draw) stats hyperparams args)))
+                                                  (sample address sandbox-store stats hyperparams args) 
+                                                  (incr-stats address sandbox-store (xrp-draw-value xrp-draw) stats hyperparams args)))
                                         ;(value ,(if *AD* '(if (continuous? (first tmp)) (tapify (first tmp)) (first tmp)) '(first tmp)))
                                          (value (first tmp))
                                          (new-stats (list (second tmp) (store->tick store)))

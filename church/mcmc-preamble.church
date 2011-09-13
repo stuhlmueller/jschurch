@@ -18,7 +18,6 @@
         (if (null? proposal-xrps)
             (list 0.0 state)
             (let* ((chosen-xrp (uniform-draw proposal-xrps))
-                   (dummy (for-each display (list "chosen-xrp " chosen-xrp "\n")))
                    (ret1 ((xrp-draw-proposer chosen-xrp) state))
                    (proposed-val (first ret1))
                    (proposal-fw-score (second ret1))
