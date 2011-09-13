@@ -18,6 +18,7 @@
         (if (null? proposal-xrps)
             (list 0.0 state)
             (let* ((chosen-xrp (uniform-draw proposal-xrps))
+                   (dummy (for-each display (list "chosen-xrp " chosen-xrp "\n")))
                    (ret1 ((xrp-draw-proposer chosen-xrp) state))
                    (proposed-val (first ret1))
                    (proposal-fw-score (second ret1))
@@ -26,7 +27,9 @@
                    (proposal-state (first ret2))
                    (cd-bw/fw (second ret2))
                    (ind-fw (- (log (length proposal-xrps))))
-                   (ind-bw (- (log (length (proposable-xrps proposal-state proposable?))))))
+                   (ind-bw (- (log (length (proposable-xrps proposal-state proposable?)))))
+                   ;(dummy (for-each display (list "ind-fw " ind-fw "  ind-bw " ind-bw "  cd-bw/fw " cd-bw/fw  " proposal-bw-score  " proposal-bw-score " proposal-fw-score  " proposal-fw-score "\n")))
+                   )
               (list (+ (- proposal-bw-score proposal-fw-score) cd-bw/fw (- ind-bw ind-fw)) proposal-state))))))
 
 (define (basic-proposal-distribution state normal-form-proc)
@@ -92,7 +95,7 @@
            (old-p (scorer state))
            (new-p (scorer proposal-state))
            (accept (log-flip (min 0.0 (+ (- new-p old-p) bw/fw))))
-           ;(dummy (for-each display (list "new p  " new-p " old-p  " old-p " bw/fw  " bw/fw "        \n")))
+           ;(dummy (for-each display (list "new p  " (/ (- new-p (log 0.3)) (log 0.7)) " old-p  " (/ (- old-p (log 0.3)) (log 0.7)) " bw/fw  " bw/fw "        \n")))
            ;(dummy (if accept (display "--accept--\n") (display "--reject--\n")))
            (dummy (reset-store-xrp-draws))) ;;FIXME!! this is to avoid accumulating xrp-draws...
       (if accept

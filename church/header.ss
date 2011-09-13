@@ -239,7 +239,7 @@
                                   (let* ((stats (car (read-addbox (store->xrp-stats store) xrp-address))) ;;FIXME: should only need to find the stats once, then do mutable update...
                                          (support-vals (if (null? support) '() (support address store stats hyperparams args)))
                                          (tmp (if (eq? trienone xrp-draw)
-                                                  (sample address store stats hyperparams args)
+                                                  (sample address store stats hyperparams args) ;;FIXME!! need to isolate random choices in sampler from MH.
                                                   (incr-stats address store (xrp-draw-value xrp-draw) stats hyperparams args)))
                                         ;(value ,(if *AD* '(if (continuous? (first tmp)) (tapify (first tmp)) (first tmp)) '(first tmp)))
                                          (value (first tmp))
@@ -314,7 +314,7 @@
      ;;  returns: a new mcmc state and the bw/fw score of any creations and deletions.
      (define (counterfactual-update state nfqp . interventions)
        (let* ((interv-store (make-store (fold (lambda (interv xrps)
-                                                (update-addbox xrps  (xrp-draw-address (first interv))
+                                                (update-addbox xrps (xrp-draw-address (first interv))
                                                                (lambda (xrp-draw)
                                                                  (make-xrp-draw (xrp-draw-address (first interv))
                                                                                 (cdr interv)
@@ -353,11 +353,11 @@
              (begin (set-store-xrp-draws! store (alist->addbox (map (lambda (d) (cons (xrp-draw-address d) d)) used-draws)))
                     bw/fw)
              (if (= (first (xrp-draw-ticks (car draws))) (store->tick store))
-                 (if (null? (cdr (xrp-draw-ticks (car draws))))
+                 (if (eq? #f (cdr (xrp-draw-ticks (car draws))))
                      ;;this was a new xrp-draw, accumulate fw prob:
                      (loop (cdr draws) (cons (car draws) used-draws) (- bw/fw
                                                                         (xrp-draw-score (car draws)) ;;NOTE: incremental differs here
-                                                                        ))
+                                                                        )) 
                      ;;this xrp-draw existed already:
                      (loop (cdr draws) (cons (car draws) used-draws) bw/fw))
                  ;;this xrp-draw was not used in last update, drop it and accumulate bw prob:
