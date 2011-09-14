@@ -22,6 +22,14 @@ def call(cmd, verbose=False, allow_fail=False):
     else:
         return status
 
+def add_prefix(filename, prefix):
+    f = open(filename)
+    content = f.read()
+    f.close()
+    f = open(filename, "w")
+    f.write(prefix + content)
+    f.close()
+    
 def parse_params(params):
     if params == "":
         return [(None, None)]
@@ -31,20 +39,14 @@ def parse_params(params):
 
 compilers = {
     "vicare" : {
-        #"header" : "scheme-compilers/header-vicare.sc",
-        #"trailer" : "scheme-compilers/trailer-vicare.sc",
         "template" : "scheme-compilers/vicare-template.sc",
         "extension" : ".ss",
         "runnable" : True },
     "biwa" : {
-        #"header" : "scheme-compilers/header-biwa.sc",
-        #"trailer" : "scheme-compilers/trailer-biwa.sc",
         "template" : "scheme-compilers/biwa-template.sc",
         "extension" : ".html",
         "runnable" : False },
     "scheme2js" : {
-        #"header" : "scheme-compilers/header-scheme2js.sc",
-        #"trailer" : "scheme-compilers/trailer-scheme2js.sc",
         "template" : "scheme-compilers/scheme2js-template.sc",
         "extension" : ".sc",
         "runnable" : False },
@@ -77,7 +79,7 @@ Examples:
   foo.church with 10, 100, and 1000 respectively. Print out runtime
   for each setting.
 
-  bher foo.church -c biwa
+  bher foo.church -c scheme2js
   Compile foo.church to html/js.
 """
     if pretty: keep = True
@@ -86,8 +88,6 @@ Examples:
     settings = {
         "bher_path" : bher_path,
         "in_path" : abspath(file),
-        ##"header_path" : abspath(os.path.join(bher_path, compilers[compiler]["header"])),
-        ##"trailer_path" : abspath(os.path.join(bher_path, compilers[compiler]["trailer"])),
         "template_path" : abspath(os.path.join(bher_path, compilers[compiler]["template"])),
         "compiler" : abspath(os.path.join(bher_path, "church/church-compiler.ss")),
         "debug" : debug and "--debug" or "",
@@ -124,11 +124,6 @@ Examples:
         call("rm -f '%(in_path)s.tmp'" % settings, verbose, allow_fail=True)
         call("rm -f '%(out_path)s.tmp'" % settings, verbose, allow_fail=True)
         
-        ## vprint("adding compiler-specific header & footer", verbose)
-        ## call(("cat '%(header_path)s' '%(out_path)s.tmp' '%(trailer_path)s' " +
-        ##       "> '%(out_path)s'") % settings, verbose)
-        ## call("rm -f '%(out_path)s.tmp'" % settings, verbose, allow_fail=True)
-
         vprint("wrapping with compiler-specific template", verbose)
         template = open(settings["template_path"]).read()
         open(settings["out_path"], "w").write(template % settings)
@@ -150,11 +145,14 @@ Examples:
         
         if compiler=="scheme2js":
             vprint("compiling scheme to js via scheme2js ", verbose)
-            settings["js_out_path"] = settings["in_path"] + ".js"
+            js_path = settings["in_path"] + ".js"
+            settings["js_out_path"] = js_path
             settings["js_math_path"] = abspath(os.path.join(settings["bher_path"], "scheme-compilers/math-functions.js"))
             settings["scheme2js_path"] = abspath(os.path.join(settings["bher_path"], "external/scheme2js/scheme2js.jar"))
             settings["scheme2js_runtime_path"] = abspath(os.path.join(settings["bher_path"], "external/scheme2js/runtime.js"))
             call("java -jar '%(scheme2js_path)s' '%(out_path)s' -o '%(js_out_path)s' -O1" % settings, verbose)
+            js_imports = """importScripts('%(scheme2js_runtime_path)s', '%(js_math_path)s');\n""" % settings
+            add_prefix(js_path, js_imports)
             if not keep:
                 call("rm -f '%(out_path)s'" % settings, verbose)
             vprint("constructing html file ", verbose)

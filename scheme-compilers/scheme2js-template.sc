@@ -48,7 +48,7 @@
 (define current-date (lambda args #f))
 (define exact->inexact (lambda (x) x))
 (define inexact->exact (lambda (x) x))
-(define (display x) (document.write x))
+(define (display x) (self.postMessage (x.toString)))
 (define pretty-print display)
 
 (define scheme-gensym gensym)
@@ -87,5 +87,6 @@
 
 ;;seed the random number generator
 (randomize-rng)
-;;go...
+
+(display "Worker running... <br>")
 (display (church-main '(top) (make-empty-store)))

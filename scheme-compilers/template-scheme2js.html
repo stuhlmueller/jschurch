@@ -2,15 +2,12 @@
 <html>
 <body>
 
-<div id="console"></div>
-
-<script type="text/javascript" src="%(scheme2js_runtime_path)s">
-</script>
-
-<script type="text/javascript" src="%(js_math_path)s">
-</script>
-
-<script type="text/javascript" src="%(js_out_path)s">
+<script type="text/javascript">
+var worker = new Worker('%(js_out_path)s');
+worker.onmessage = function(event) {
+  document.write(event.data);
+};
+// worker.postMessage();
 </script>
 
 </body>
