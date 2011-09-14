@@ -7,7 +7,6 @@ var worker = new Worker('%(js_out_path)s');
 worker.onmessage = function(event) {
   document.write(event.data);
 };
-// worker.postMessage();
 </script>
 
 </body>
