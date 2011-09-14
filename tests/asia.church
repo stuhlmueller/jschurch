@@ -1,0 +1,27 @@
+;hush
+
+(define samps (mh-query 1000 10
+  (define smoker (flip 0.5))
+  
+  (define tb (flip (if smoker 0.05 0.01)))
+  (define cancer (flip (if smoker 0.1 0.01)))
+  
+  (define tb-or-cancer (or tb cancer))
+  
+  (define bronchitis (flip (if smoker 0.6 0.3)))
+  
+  (define xray (flip (if tb-or-cancer 0.98 0.05)))
+  
+  (define dyspnoea (flip
+    (if tb-or-cancer
+      (if bronchitis 0.9 0.7)
+      (if bronchitis 0.8 0.1)
+    )))
+  
+  bronchitis
+  
+  dyspnoea
+  
+  ))
+  
+(length (filter (lambda (x) x) samps))
