@@ -132,7 +132,13 @@
 ; Returns the reverse of a list.
 ; @param lst the list
 ; @returns the reverse of the list
-(define (reverse lst) (fold pair '() lst)) ;;this one could be primitive.
+;(define (reverse lst) (fold pair '() lst)) ;;this one could be primitive.
+(define (reverse lst)
+  (let loop ((newlst '())
+             (lst lst))
+    (if (null? lst)
+        newlst
+        (loop (cons (car lst) newlst) (cdr lst)))))
 
 ; @desc
 ; Apply a procedure to each element of some lists.
