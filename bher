@@ -151,6 +151,7 @@ Examples:
         if compiler=="scheme2js":
             vprint("compiling scheme to js via scheme2js ", verbose)
             settings["js_out_path"] = settings["in_path"] + ".js"
+            settings["js_math_path"] = abspath(os.path.join(settings["bher_path"], "scheme-compilers/math-functions.js"))
             settings["scheme2js_path"] = abspath(os.path.join(settings["bher_path"], "external/scheme2js/scheme2js.jar"))
             settings["scheme2js_runtime_path"] = abspath(os.path.join(settings["bher_path"], "external/scheme2js/runtime.js"))
             call("java -jar '%(scheme2js_path)s' '%(out_path)s' -o '%(js_out_path)s' -O1" % settings, verbose)

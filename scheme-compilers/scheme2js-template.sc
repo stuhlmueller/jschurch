@@ -1,12 +1,10 @@
-
-
-(define infinity (- (Math.log 0))) ;;FIXME: should be Infinity, but some renaming gets in the way...
-(define minus-infinity (Math.log 0))
-(define nan (/ 0 1))
+(define infinity Number.POSITIVE_INFINITY)
+(define minus-infinity Number.NEGATIVE_INFINITY)
+(define nan NaN)
 (define pi Math.PI)
 
 (define logistic #f)
-(define lnfact #f)
+;;(define lnfact #f)
 (define binomial-pdf #f)
 (define gamma-lnpdf #f)
 (define dirichlet-lnpdf #f)
