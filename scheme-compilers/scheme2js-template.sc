@@ -3,6 +3,8 @@
 (define nan NaN)
 (define pi Math.PI)
 
+
+;;;we need the following math functions (which are provided by GSL in the ikarus version)
 (define logistic #f)
 ;;(define lnfact #f)
 (define binomial-pdf #f)
@@ -15,6 +17,7 @@
 (define discrete-pdf #f)
 
 (define seed-rng #f)
+(define randomize-rng (lambda args #f))
 (define random-real Math.random)
 (define (random-integer n) (Math.floor (* (Math.random) n)))
 (define discrete-sampler #f)
@@ -33,6 +36,8 @@
 ;(define normalize #f)
 
 
+;;;various functions needed by header:
+
 ;; ;(fold kons knil lis) = (fold kons (kons (car lis) knil) (cdr lis))
 ;; ;(fold kons knil '()) = knil
 (define (fold f z xs)
@@ -40,7 +45,6 @@
       z
       (fold f (f (first xs) z) (rest xs))))
 
-(define randomize-rng (lambda args #f))
 (define current-date (lambda args #f))
 (define exact->inexact (lambda (x) x))
 (define inexact->exact (lambda (x) x))
@@ -66,7 +70,7 @@
 (define (tenth lst) (list-ref lst 9))
 
 
-;;for score gradients:
+;;;for score gradients (currently not working), requires AD:
 (define (*with-score-gradient*) #f)
 (define (xy-gradient-R x) (error 'grad-undefined "xy-gradient-R undefined"))
 (define (tape? x) #f)
@@ -76,10 +80,12 @@
 ;; (define (continuous? x) (and (real? x) (not (fixnum? x))))
 (define continuous? real?)
 
+;;;the program, defining the church-main function, will be spliced in here:
 %(churchprogram)s
+
+
 
 ;;seed the random number generator
 (randomize-rng)
-
+;;go...
 (display (church-main '(top) (make-empty-store)))
-;(church-main '(top) (make-empty-store))
