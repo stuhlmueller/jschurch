@@ -6,11 +6,6 @@ function fact(x)
     return t;
 }
 
-function pi()
-{
-    return Math.PI;
-}
-
 // ln(x!) by Stirling's formula
 // [Knuth I: p111]
 function lnfact(x)

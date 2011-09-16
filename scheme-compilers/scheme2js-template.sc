@@ -18,7 +18,7 @@
 (define gaussian-lnpdf #f)
 (define tdist-pdf #f)
 (define mmultinomial-lnpdf #f)
-(define discrete-pdf #f)k,
+(define discrete-pdf #f)
 (define seed-rng #f)
 (define discrete-sampler #f)
 (define sample-binomial #f)
