@@ -25,7 +25,7 @@
  ;;list of the primitive routines (defined in header) that need access to address and store.
  (define *threaded-primitives*
    '(apply force reset-store-xrp-draws make-xrp make-initial-mcmc-state make-initial-enumeration-state))
- 
+
  (define (compile top-list external-defs . lazy)
    (let* ((church-sexpr  `(begin
                             (load "standard-preamble.church")
@@ -54,7 +54,7 @@
  (define (if? exp) (tagged-list? exp 'if))
  (define (application? exp) (pair? exp))
  (define (letrec? exp) (tagged-list? exp 'letrec))
- 
+
  ;;this transformation makes addresses (that parallel the dynamic call stack) be computed by the program.
  ;; each procedure gains address and store arguments. (the store is used to pass context information down to the random choices.)
  ;;this transform also does a church-rename to all symbols in the program (which adds church- prefix), to avoid collision with the target language.
@@ -82,7 +82,7 @@
            `(,(first sexpr) ,@(map addressing (rest sexpr)))
            `(,(addressing (first sexpr)) (cons ',(next-addr) address) store ,@(map addressing (rest sexpr)))))
       ;;symbols (that aren't primitive and in operator position) are renamed to avoid collisions with target language when wrapping them.
-      ((symbol? sexpr) (church-rename sexpr))
+      ((symbol? sexpr) (if (not (primitive? sexpr)) (church-rename sexpr) sexpr))
       ;;some compilers can't handle the r6rs inf numbers.
       ((number? sexpr) (cond ((nan? sexpr) 'nan)
                              ((= sexpr +inf.0) 'infinity)
@@ -145,14 +145,14 @@
                     (loop (append new-binding-vars bindings) ;;extended binding set
                           (lset-difference eq? unused-bindings-vars new-binding-vars) ;;remaining binding vars
                           (apply append (map (lambda (b) (free-variables (second (assoc b (second sexpr))) '())) new-binding-vars)))))))) ;;free vars of new bindings
-       
+
        `(letrec ,(remove-dead kept-bindings)
           ,(remove-dead (third sexpr)))))
     ((list? sexpr) (map remove-dead sexpr))
     (else sexpr)))
 
- 
- 
+
+
  ;;this supports lazy evaluation by adding force to appropriate places (must also add forcing to primitives via header).
  (define (add-forcing sexpr)
    (cond
@@ -170,4 +170,3 @@
 
 
  )
-

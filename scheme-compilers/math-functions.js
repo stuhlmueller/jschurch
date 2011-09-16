@@ -6,6 +6,11 @@ function fact(x)
     return t;
 }
 
+function pi()
+{
+    return Math.PI;
+}
+
 // ln(x!) by Stirling's formula
 // [Knuth I: p111]
 function lnfact(x)
@@ -105,4 +110,24 @@ function binomial_pdf(k, p, n)
     z = normal_cdf(z);
 
     return z;
+}
+
+// Poisson probability distribution function via iterative expansion
+function poisson_pdf(k, mu)
+{
+    return Math.exp(k * Math.log(mu) - mu - lnfact(k));
+}
+
+// Draw sample from Poisson distribution
+// Knuth TAOCP 2
+// This is a linear algorithm: will replace
+function sample_poisson(mu)
+{
+    var l = Math.exp(-mu);
+    var k = 0;
+    var p = 1;
+
+    do{ k++; p*=Math.random(); } while (p > l);
+
+    return k-1;
 }

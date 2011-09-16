@@ -1,29 +1,27 @@
-(define infinity (- (Math.log 0)))
-(define minus-infinity (Math.log 0))
-(define nan (/ 1 0))
-;; Note that the following doesn't work: we need some fancy metaprogramming here...
-;; (define pi Math.PI)
-(define pi #f)
+(define infinity Number.POSITIVE_INFINITY)
+(define minus-infinity Number.NEGATIVE_INFINITY)
+(define nan Number.NaN)
+(define pi Math.PI)
 
 ;;;we need the following math functions (which are provided by GSL in the ikarus version)
 ;;(define logistic #f)
 ;;(define lnfact #f)
-(define binomial-pdf binomial_pdf)
-(define gamma-lnpdf #f)
-(define dirichlet-lnpdf #f)
-(define poisson-pdf #f)
-(define gaussian-lnpdf #f)
-(define tdist-pdf #f)
-(define mmultinomial-lnpdf #f)
-(define discrete-pdf #f)
-
-(define seed-rng #f)
 (define randomize-rng (lambda args #f))
 (define random-real Math.random)
 (define (random-integer n) (Math.floor (* (Math.random) n)))
+(define binomial-pdf binomial_pdf)
+(define poisson-pdf poisson_pdf)
+(define sample-poisson sample_poisson)
+
+(define gamma-lnpdf #f)
+(define dirichlet-lnpdf #f)
+(define gaussian-lnpdf #f)
+(define tdist-pdf #f)
+(define mmultinomial-lnpdf #f)
+(define discrete-pdf #f)k,
+(define seed-rng #f)
 (define discrete-sampler #f)
 (define sample-binomial #f)
-(define sample-poisson #f)
 (define sample-gaussian #f)
 (define sample-generalized-tdist #f)
 (define sample-tdist #f)
@@ -70,7 +68,6 @@
 (define (ninth lst) (list-ref lst 8))
 (define (tenth lst) (list-ref lst 9))
 
-
 ;;;for score gradients (currently not working), requires AD:
 (define (*with-score-gradient*) #f)
 (define (xy-gradient-R x) (error 'grad-undefined "xy-gradient-R undefined"))
@@ -83,8 +80,6 @@
 
 ;;;the program, defining the church-main function, will be spliced in here:
 %(churchprogram)s
-
-
 
 ;;seed the random number generator
 (randomize-rng)
