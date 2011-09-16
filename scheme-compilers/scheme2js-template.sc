@@ -1,13 +1,14 @@
-(define infinity Number.POSITIVE_INFINITY)
-(define minus-infinity Number.NEGATIVE_INFINITY)
-(define nan NaN)
-(define pi Math.PI)
-
+(define infinity (- (Math.log 0)))
+(define minus-infinity (Math.log 0))
+(define nan (/ 1 0))
+;; Note that the following doesn't work: we need some fancy metaprogramming here...
+;; (define pi Math.PI)
+(define pi #f)
 
 ;;;we need the following math functions (which are provided by GSL in the ikarus version)
-(define logistic #f)
+;;(define logistic #f)
 ;;(define lnfact #f)
-(define binomial-pdf #f)
+(define binomial-pdf binomial_pdf)
 (define gamma-lnpdf #f)
 (define dirichlet-lnpdf #f)
 (define poisson-pdf #f)
