@@ -1,7 +1,14 @@
-(define infinity Number.POSITIVE_INFINITY)
-(define minus-infinity Number.NEGATIVE_INFINITY)
-(define nan Number.NaN)
-(define pi Math.PI)
+;; Utterly broken constants
+(define infinity 999999999999)
+(define minus-infinity (- 999999999999))
+(define nan (/ 1 0))
+(define pi 3.14159265)
+
+;; These are the correct defines, but they don't work until we fix the compiler
+;; (define infinity Number.POSITIVE_INFINITY)
+;; (define minus-infinity Number.NEGATIVE_INFINITY)
+;; (define nan Number.NaN)
+;; (define pi Math.PI)
 
 ;;;we need the following math functions (which are provided by GSL in the ikarus version)
 ;;(define logistic #f)
