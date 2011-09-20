@@ -115,42 +115,14 @@ function poisson_pdf(k, mu)
 
 // Draw sample from Poisson distribution
 // Knuth TAOCP 2
-function sample_poisson_knuth(mu)
+function sample_poisson(mu)
 {
     var n = Math.floor(mu);  
     if(n<1) n=1;
     
     var x = sample_gamma(n);
     if(x>u) return sample_binomial(n-1, mu/x);
-    else return sample n+sample_poisson(mu-x);
-}
-
-// Draw sample from Poisson distribution
-// Ahrens-Dieter
-function sample_poisson(mu)
-{
-    var k=0;
-    var w=mu;
-    var c=18;  // 16 to 24?
-
-    if(w<c)
-    {        
-        var p=1;
-        var b=Math.exp(-w);
-        do
-        {
-            var u=Math.random();
-            p=p*u;
-            k++;
-        } while(p<b);
-    }
-    else
-    {
-        var d = 7/8;
-        var n = Math.floor[d * w];
-        var x = sample_gamma(n);
-        
-    }
+    else return n+sample_poisson(mu-x);
 }
 
 // Draw a sample from a Gaussian distribution
