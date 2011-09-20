@@ -82,7 +82,9 @@
            `(,(first sexpr) ,@(map addressing (rest sexpr)))
            `(,(addressing (first sexpr)) (cons ',(next-addr) address) store ,@(map addressing (rest sexpr)))))
       ;;symbols (that aren't primitive and in operator position) are renamed to avoid collisions with target language when wrapping them.
-      ((symbol? sexpr) (if (not (primitive? sexpr)) (church-rename sexpr) sexpr))
+
+      ((symbol? sexpr) (church-rename sexpr))
+      ;;((symbol? sexpr) (if (not (primitive? sexpr)) (church-rename sexpr) sexpr))
       ;;some compilers can't handle the r6rs inf numbers.
       ((number? sexpr) (cond ((nan? sexpr) 'nan)
                              ((= sexpr +inf.0) 'infinity)
@@ -193,7 +195,7 @@
  ;;            ((eq? operator XV) ..)
  ;;            ((lambda? operator) ...)
  ;;            ((primitive? operator) ...) ;;for invertible ones, invert.
-            
+
  ;;      (apply append (map (lambda (e) (free-variables e bound-vars)) sexpr)))
  ;;    ((symbol? sexpr) (env-lookup sexpr env)) ;;fix: if it isn't bound, assume it's primitive.
  ;;    (else sexpr) ))
