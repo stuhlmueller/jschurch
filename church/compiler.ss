@@ -169,4 +169,34 @@
 
 
 
+ ;; ;;do a partial evaluation with constraint propogation.
+ ;; ;;abstract values are: xrp (from make-xrp), random (if a an xrp may have contributed to this value), and ordinary values.
+ ;; ;;when an ordinary value is applied to ordinary values we repace with a static result (to evaluate away non-random things).
+ ;; ;;functions that cannot invoke xrp values as operators are marked as deterministic (allows to avoid addressing in them).
+ ;; ;;when an xrp value is applied in a constrained context, we mark with set-xrp.
+ ;; (define WC 'wildcard-cs)
+ ;; (define XV 'xrp-val)
+ ;; (define (peval/constraints sexpr cs env)
+ ;;   (cond
+ ;;    ((begin? sexpr) (apply append (map (lambda (e) (free-variables e bound-vars)) (rest sexpr))))
+ ;;    ((letrec? sexpr)
+ ;;     (let ((new-bound (append (map first (second sexpr)) bound-vars)))
+ ;;       (apply append (map (lambda (e) (free-variables e new-bound)) (pair (third sexpr) (map second (second sexpr)))))))
+ ;;    ((quoted? sexpr) '())
+ ;;    ((lambda? sexpr) (make-closure sexpr env)) ;;lambda generates the usual lambda value. need closure?
+ ;;    ((mem? sexpr) (free-variables (second sexpr) bound-vars))
+ ;;    ((if? sexpr)  (apply append (map (lambda (e) (free-variables e bound-vars)) (rest sexpr))))
+ ;;    ((application? sexpr)
+ ;;     (let ((operator (peval/constraints (first sexpr) WC env))
+ ;;           (cond
+ ;;            ((eq? (first sexpr) 'make-xrp) XV)
+ ;;            ((eq? operator XV) ..)
+ ;;            ((lambda? operator) ...)
+ ;;            ((primitive? operator) ...) ;;for invertible ones, invert.
+            
+ ;;      (apply append (map (lambda (e) (free-variables e bound-vars)) sexpr)))
+ ;;    ((symbol? sexpr) (env-lookup sexpr env)) ;;fix: if it isn't bound, assume it's primitive.
+ ;;    (else sexpr) ))
+
+
  )
