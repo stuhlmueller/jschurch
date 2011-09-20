@@ -12,6 +12,8 @@
 (define binomial-pdf binomial_pdf)
 (define poisson-pdf poisson_pdf)
 (define sample-poisson sample_poisson)
+(define sample-gaussian sample_gaussian)
+(define sample-gamma sample_gamma)
 
 (define gamma-lnpdf #f)
 (define dirichlet-lnpdf #f)
@@ -22,10 +24,8 @@
 (define seed-rng #f)
 (define discrete-sampler #f)
 (define sample-binomial #f)
-(define sample-gaussian #f)
 (define sample-generalized-tdist #f)
 (define sample-tdist #f)
-(define sample-gamma #f)
 (define sample-dirichlet #f)
 ;(define sample-mmultinomial #f)
 

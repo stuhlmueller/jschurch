@@ -115,14 +115,82 @@ function poisson_pdf(k, mu)
 
 // Draw sample from Poisson distribution
 // Knuth TAOCP 2
-// This is a linear algorithm: will replace
+function sample_poisson_knuth(mu)
+{
+    var n = Math.floor(mu);  
+    if(n<1) n=1;
+    
+    var x = sample_gamma(n);
+    if(x>u) return sample_binomial(n-1, mu/x);
+    else return sample n+sample_poisson(mu-x);
+}
+
+// Draw sample from Poisson distribution
+// Ahrens-Dieter
 function sample_poisson(mu)
 {
-    var l = Math.exp(-mu);
-    var k = 0;
-    var p = 1;
+    var k=0;
+    var w=mu;
+    var c=18;  // 16 to 24?
 
-    do{ k++; p*=Math.random(); } while (p > l);
+    if(w<c)
+    {        
+        var p=1;
+        var b=Math.exp(-w);
+        do
+        {
+            var u=Math.random();
+            p=p*u;
+            k++;
+        } while(p<b);
+    }
+    else
+    {
+        var d = 7/8;
+        var n = Math.floor[d * w];
+        var x = sample_gamma(n);
+        
+    }
+}
 
-    return k-1;
+// Draw a sample from a Gaussian distribution
+// Marsaglia '64
+// TODO: replace with Ziggurat method
+var gaussian_spare,have_spare=false;
+function sample_gaussian(mu,sigma)
+{
+    if(have_spare){ have_spare=false; return gaussian_spare; }
+
+    var x,y;
+    do
+    {
+        x = 2*Math.random() - 1; y = 2*Math.random() - 1;
+        s = x*x + y*y;
+    } 
+    while(s >= 1);
+    
+    var t = Math.sqrt(-2*Math.log(s)/s);
+    gaussian_spare=t*y; have_spare=true;
+    return t*x;
+}
+
+// Draw sample from a Gamma distribution
+// Marsagli and Tsang '00
+// This is reasonably efficient provided sample_gaussian is efficient
+function sample_gamma(a)
+{
+    var x,v,u;
+    var d = a-1/3;
+    var c = 1/Math.sqrt(9*d);
+
+    while(true)
+    {
+        do{x = sample_gaussian(0,1);  v = 1+c*x;} while(v <= 0);
+        
+        v=v*v*v; 
+        u=Math.random();
+        
+        if(u < 1 - .331*(x*x)*(x*x)) return d*v;
+        if(Math.log(u) < .5*x*x + d*(1 - v + Math.log(v))) return d*v;
+    }            
 }
