@@ -1,3 +1,151 @@
+// Draw sample from Poisson distribution
+// Knuth TAOCP 2 (roughly optimal)
+function sample_poisson(mu)
+{
+    var k = 0;
+
+    while(mu > 10)
+    {
+        var m = 7/8*mu;
+        var x = Math.sample_gamma(m);
+
+        if(x > mu) return k + sample_binomial(mu/x, m-1);
+        else{ mu -= x; k += m; }
+    }
+
+    var emu = Math.exp(-mu);
+    var p = 1;
+    do{ p *= Math.random(); k++; } while(p > emu);
+
+    return k-1;
+}
+
+// Draw sample from a Gamma distribution
+// Marsagli and Tsang '00 (roughly optimal)
+function sample_gamma(a,b)
+{
+    if(a < 1) return sample_gamma(1+a,b) * Math.pow(Math.random(), 1/a);
+
+    var x,v,u;
+    var d = a-1/3;
+    var c = 1/Math.sqrt(9*d);
+
+    while(true)
+    {
+        do{x = sample_gaussian(1);  v = 1+c*x;} while(v <= 0);
+
+        v=v*v*v;
+        u=Math.random();
+
+        if((u < 1 - .331*x*x*x*x) || (Math.log(u) < .5*x*x + d*(1 - v + Math.log(v)))) return b*d*v;
+    }
+}
+
+// Draw a sample from a Binomial distribution
+// Knuth TAOCP 2 (could be improved, i.e. via Kachitvichyanukul & Schmeiser)
+function sample_binomial(p,n)
+{
+    var k = 0;
+    var N = 10;
+
+    var a, b;
+    while(n > N)
+    {
+        a = 1 + n/2;
+        b = 1 + n-a;
+
+        var x = sample_beta(a,b);
+
+        if(x >= p){ n = a-1; p /= x; }
+        else{ k += a; n = b - 1; p = (p-x) / (1-x); }
+    }
+
+    var u;
+    for(i=0; i<n; i++)
+    {
+        u = Math.random();
+        if(u<p) k++;
+    }
+
+    return k;
+}
+
+// Draw a sample from a Beta distribution
+// Knuth TAOCP 2 (roughly optimal)
+function sample_beta(a, b)
+{
+    var x = sample_gamma(a, 1);
+    return x / (x + sample_gamma(b, 1));
+}
+
+// Draw a sample from a Gaussian distribution
+// Leva '92 (could be improved, i.e. via Ziggurat method)
+function sample_gaussian(sigma)
+{
+    var u, v, x, y, q;
+
+    do
+    {
+        u = 1 - Math.random();
+        v = 1.7156 * (Math.random() - .5);
+        x = u - 0.449871;
+        y = Math.abs(v) + 0.386595;
+        q = x*x + y*(0.196*y - 0.25472*x);
+    }
+    while(q >= 0.27597 && (q > 0.27846 || v*v > -4 * u * u * Math.log(u)))
+
+    return sigma*v/u;
+}
+
+// Draw a sample from a Dirichlet distribution
+// Law & Kelton (roughly optimal)
+// TODO: may need to match function signature for Ikarus compatibility
+// TODO: handle underflow in normalization
+function sample_dirichlet(alpha)
+{
+    var theta = new Array(alpha.length);
+    var sum = 0;
+
+    for(i=0; i<alpha.length; i++){ theta[i] = sample_gamma(alpha[i],1); sum += theta[i]; }
+    for(i=0; i<alpha.length; i++) theta[i] /= sum;
+
+    return theta;
+}
+
+// Draw a sample from a Student's t-distribution
+// Marsaglia '80
+function sample_tdist(nu)
+{
+    if(nu <= 2) return sample_gaussian(1) / sqrt( 2 * sample_gamma(nu/2, 1) / nu);
+
+    var a,b,c,t;
+    do
+    {
+        a = sample_gaussian(1);
+        b = -1 / (nu/2 - 1) * log1p(-Math.random());
+        c = a*a/(nu - 2);
+    }
+    while(1-c < 0 || Math.exp(-b-c) > (1-c));
+
+    return a / Math.sqrt((1-c/nu) * (1-c));
+}
+
+// Returns log(1 + x) in a numerically stable way
+function log1p(x)
+{
+    var ret = 0;
+    var n = 50; // degree of precision
+
+    if(x <= -1) return Number.NEGATIVE_INFINITY;
+    if(x < 0 || x > 1) return Math.log(1+x);
+
+    for(i=1; i<n; i++)
+        if ((i % 2) === 0) ret -= Math.pow(x,i)/i;
+        else ret += Math.pow(x,i)/i;
+
+    return ret;
+}
+
 // factorial(x)
 function fact(x)
 {
@@ -111,58 +259,4 @@ function binomial_pdf(k, p, n)
 function poisson_pdf(k, mu)
 {
     return Math.exp(k * Math.log(mu) - mu - lnfact(k));
-}
-
-// Draw sample from Poisson distribution
-// Knuth TAOCP 2
-function sample_poisson(mu)
-{
-    var n = Math.floor(mu);  
-    if(n<1) n=1;
-    
-    var x = sample_gamma(n);
-    if(x>u) return sample_binomial(n-1, mu/x);
-    else return n+sample_poisson(mu-x);
-}
-
-// Draw a sample from a Gaussian distribution
-// Marsaglia '64
-// TODO: replace with Ziggurat method
-var gaussian_spare,have_spare=false;
-function sample_gaussian(mu,sigma)
-{
-    if(have_spare){ have_spare=false; return gaussian_spare; }
-
-    var x,y;
-    do
-    {
-        x = 2*Math.random() - 1; y = 2*Math.random() - 1;
-        s = x*x + y*y;
-    } 
-    while(s >= 1);
-    
-    var t = Math.sqrt(-2*Math.log(s)/s);
-    gaussian_spare=t*y; have_spare=true;
-    return t*x;
-}
-
-// Draw sample from a Gamma distribution
-// Marsagli and Tsang '00
-// This is reasonably efficient provided sample_gaussian is efficient
-function sample_gamma(a)
-{
-    var x,v,u;
-    var d = a-1/3;
-    var c = 1/Math.sqrt(9*d);
-
-    while(true)
-    {
-        do{x = sample_gaussian(0,1);  v = 1+c*x;} while(v <= 0);
-        
-        v=v*v*v; 
-        u=Math.random();
-        
-        if(u < 1 - .331*(x*x)*(x*x)) return d*v;
-        if(Math.log(u) < .5*x*x + d*(1 - v + Math.log(v))) return d*v;
-    }            
 }
