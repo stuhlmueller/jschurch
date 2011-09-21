@@ -1,4 +1,4 @@
-;; Utterly broken constants
+;; Broken placeholder constants
 (define infinity 999999999999)
 (define minus-infinity (- 999999999999))
 (define nan (/ 1 0))
@@ -10,18 +10,23 @@
 ;; (define nan Number.NaN)
 ;; (define pi Math.PI)
 
-;;;we need the following math functions (which are provided by GSL in the ikarus version)
+;; Javascript function aliases
+(define sample-gamma sample_gamma)
+(define sample-poisson sample_poisson)
+(define sample-binomial sample_binomial)
+(define sample-beta sample_beta)
+(define sample-gaussian sample_gaussian)
+(define sample-dirichlet sample_dirichlet)
+(define sample-tdist sample_tdist)
+(define binomial-pdf binomial_pdf)
+(define poisson-pdf poisson_pdf)
 ;;(define logistic #f)
 ;;(define lnfact #f)
+
+;;;Still need the following math functions (which are provided by GSL in the ikarus version)
 (define randomize-rng (lambda args #f))
 (define random-real Math.random)
 (define (random-integer n) (Math.floor (* (Math.random) n)))
-(define binomial-pdf binomial_pdf)
-(define poisson-pdf poisson_pdf)
-(define sample-poisson sample_poisson)
-(define sample-gaussian sample_gaussian)
-(define sample-gamma sample_gamma)
-
 (define gamma-lnpdf #f)
 (define dirichlet-lnpdf #f)
 (define gaussian-lnpdf #f)
@@ -30,10 +35,8 @@
 (define discrete-pdf #f)
 (define seed-rng #f)
 (define discrete-sampler #f)
-(define sample-binomial #f)
 (define sample-generalized-tdist #f)
-(define sample-tdist #f)
-(define sample-dirichlet #f)
+
 ;(define sample-mmultinomial #f)
 
 ;(define sum #f)
