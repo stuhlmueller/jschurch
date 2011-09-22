@@ -18,12 +18,12 @@
 
 ;; These functions are defined in math-functions.js, but need aliases
 (define sample-gamma sample_gamma)
-(define gamma-pdf gamma_pdf) ;; Why was this an ln version?
+(define gamma-pdf gamma_pdf) ;; Why was this an ln version? Score computations are done in ln domain, so need ln-score...
 (define sample-poisson sample_poisson)
 (define sample-binomial sample_binomial)
 (define sample-beta sample_beta)
 (define sample-gaussian sample_gaussian)
-(define gaussian-pdf gaussian_pdf) ;; Why was this an ln version?
+(define gaussian-pdf gaussian_pdf) ;; Why was this an ln version? Score computations are done in ln domain, so need ln-score...
 (define sample-dirichlet sample_dirichlet)
 (define dirichlet-lnpdf dirichlet_lnpdf)
 (define sample-tdist sample_tdist)
@@ -39,12 +39,15 @@
 ;;(define sum #f)
 ;;(define mean #f)
 
-;;;Still need the following math functions (which are provided by GSL in the ikarus version)
-;; These function are *not* defined yet
-;;(define sample-mmultinomial #f)
-;;(define mmultinomial-lnpdf #f)
-;;(define discrete-pdf #f)
-;;(define discrete-sampler #f)
+;;;The following math functions (which are provided by GSL in the ikarus version) could be given js implementations...
+(define (discrete-pdf probs val) (list-ref probs val))
+(define (discrete-sampler probs)
+  (let loop ((probs probs)
+             (past 0)
+             (i 0))
+    (if (< (random-real) (/ (first probs) (- 1 past)))
+        i
+        (loop (rest probs) (+ past (first probs)) (+ i 1)))))
 
 ;;;various functions needed by header:
 
