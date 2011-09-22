@@ -98,7 +98,7 @@
 
 (define gaussian (make-stateless-xrp 'gaussian
                                      (lambda args (sample-gaussian (first args) (second args)))
-                                     (lambda (args val) (gaussian-lnpdf val (first args) (second args)))))
+                                     (lambda (args val) (log (gaussian-pdf val (first args) (second args))))))
 
 (define gensym (make-stateless-xrp 'gensym
                                    (lambda prefix (apply scheme-gensym prefix))
