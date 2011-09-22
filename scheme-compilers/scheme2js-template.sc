@@ -10,40 +10,41 @@
 ;; (define nan Number.NaN)
 ;; (define pi Math.PI)
 
-;; Javascript function aliases
+;; These functions are defined in math-functions.js
+;;(define logistic #f)
+;;(define lnfact #f)
+;;(define logsumexp #f)
+;(define normalize #f)
+
+;; These functions are defined in math-functions.js, but need aliases
 (define sample-gamma sample_gamma)
+(define gamma-pdf gamma_pdf) ;; Why was this an ln version?
 (define sample-poisson sample_poisson)
 (define sample-binomial sample_binomial)
 (define sample-beta sample_beta)
 (define sample-gaussian sample_gaussian)
+(define gaussian-pdf gaussian_pdf) ;; Why was this an ln version?
 (define sample-dirichlet sample_dirichlet)
+(define dirichlet-lnpdf dirichlet_lnpdf)
 (define sample-tdist sample_tdist)
+(define tdist-pdf tdist_pdf)
+(define sample-generalized-tdist sample_generalized_tdist)
 (define binomial-pdf binomial_pdf)
 (define poisson-pdf poisson_pdf)
-;;(define logistic #f)
-;;(define lnfact #f)
+(define random-real random_real)
+(define random-integer random_integer)
+(define seed-rng seed_rng)
+
+;; These two are defined, but there are some name clashes
+;;(define sum #f)
+;;(define mean #f)
 
 ;;;Still need the following math functions (which are provided by GSL in the ikarus version)
-(define randomize-rng (lambda args #f))
-(define random-real Math.random)
-(define (random-integer n) (Math.floor (* (Math.random) n)))
-(define gamma-lnpdf #f)
-(define dirichlet-lnpdf #f)
-(define gaussian-lnpdf #f)
-(define tdist-pdf #f)
-(define mmultinomial-lnpdf #f)
-(define discrete-pdf #f)
-(define seed-rng #f)
-(define discrete-sampler #f)
-(define sample-generalized-tdist #f)
-
-;(define sample-mmultinomial #f)
-
-;(define sum #f)
-;(define mean #f)
-;(define logsumexp #f)
-;(define normalize #f)
-
+;; These function are *not* defined yet
+;;(define sample-mmultinomial #f)
+;;(define mmultinomial-lnpdf #f)
+;;(define discrete-pdf #f)
+;;(define discrete-sampler #f)
 
 ;;;various functions needed by header:
 
@@ -91,7 +92,5 @@
 ;;;the program, defining the church-main function, will be spliced in here:
 %(churchprogram)s
 
-;;seed the random number generator
-(randomize-rng)
 ;;go...
 (display (church-main '(top) (make-empty-store)))

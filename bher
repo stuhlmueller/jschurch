@@ -98,14 +98,14 @@ Examples:
     for (i, (param_key, param_value)) in enumerate(params):
 
         if param_key:
-            vprint("* %s: %s" % (param_key, param_value), True)            
+            vprint("* %s: %s" % (param_key, param_value), True)
             settings["out_path"] = abspath(file) + "." + str(i) + ".ss"
         else:
             settings["out_path"] = abspath(file) + compilers[compiler]["extension"]
 
         vprint("removing old compilation files (if existent)", verbose)
         call("rm -f '%(out_path)s'" % settings, verbose, allow_fail=True)
-        call("rm -f '%(out_path)s.tmp'" % settings, verbose, allow_fail=True)        
+        call("rm -f '%(out_path)s.tmp'" % settings, verbose, allow_fail=True)
         call("rm -f '%(in_path)s.tmp'" % settings, verbose, allow_fail=True)
 
         vprint("processing input file", verbose)
@@ -123,7 +123,7 @@ Examples:
         settings["churchprogram"] = open("%(out_path)s.tmp" % settings).read()
         call("rm -f '%(in_path)s.tmp'" % settings, verbose, allow_fail=True)
         call("rm -f '%(out_path)s.tmp'" % settings, verbose, allow_fail=True)
-        
+
         ## vprint("adding compiler-specific header & footer", verbose)
         ## call(("cat '%(header_path)s' '%(out_path)s.tmp' '%(trailer_path)s' " +
         ##       "> '%(out_path)s'") % settings, verbose)
@@ -138,27 +138,29 @@ Examples:
             pre = datetime.now()
             call("vicare %(debug)s --r6rs-script '%(out_path)s'" % settings, verbose)
             post = datetime.now()
-            
+
             if time:
                 delta = post-pre
                 seconds = delta.seconds + delta.microseconds/1000000.0
                 print("runtime: %fs" % seconds)
-            
+
             if not keep:
                 vprint("removing compiled file", verbose)
                 call("rm -f '%(out_path)s'" % settings, verbose)
-        
+
         if compiler=="scheme2js":
             vprint("compiling scheme to js via scheme2js ", verbose)
             settings["js_out_path"] = settings["in_path"] + ".js"
-            settings["js_math_path"] = abspath(os.path.join(settings["bher_path"], "scheme-compilers/math-functions.js"))
+            settings["js_mash_path"] = abspath(os.path.join(settings["bher_path"], "scheme-compilers/javascript/random/Mash.js"))
+            settings["js_random_path"] = abspath(os.path.join(settings["bher_path"], "scheme-compilers/javascript/random/MRG32k3a.js"))
+            settings["js_math_path"] = abspath(os.path.join(settings["bher_path"], "scheme-compilers/javascript/math-functions.js"))
             settings["scheme2js_path"] = abspath(os.path.join(settings["bher_path"], "external/scheme2js/scheme2js.jar"))
             settings["scheme2js_runtime_path"] = abspath(os.path.join(settings["bher_path"], "external/scheme2js/runtime.js"))
             call("java -jar '%(scheme2js_path)s' '%(out_path)s' -o '%(js_out_path)s' -O1" % settings, verbose)
             if not keep:
                 call("rm -f '%(out_path)s'" % settings, verbose)
             vprint("constructing html file ", verbose)
-            scheme2js_template = open("scheme-compilers/template-scheme2js.html").read()            
+            scheme2js_template = open("scheme-compilers/template-scheme2js.html").read()
             scheme2js_html = scheme2js_template % settings
             f = open(settings["in_path"] + ".html", "w")
             f.write(scheme2js_html)
