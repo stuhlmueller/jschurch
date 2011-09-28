@@ -1,4 +1,4 @@
-;; Broken placeholder constants
+3;; Broken placeholder constants
 (define infinity 999999999999)
 (define minus-infinity (- 999999999999))
 (define nan (/ 1 0))
@@ -18,12 +18,14 @@
 
 ;; These functions are defined in math-functions.js, but need aliases
 (define sample-gamma sample_gamma)
-(define gamma-pdf gamma_pdf) ;; Why was this an ln version? Score computations are done in ln domain, so need ln-score...
+(define gamma-pdf gamma_pdf)
+(define gamma-lnpdf gamma_lnpdf)
 (define sample-poisson sample_poisson)
 (define sample-binomial sample_binomial)
 (define sample-beta sample_beta)
 (define sample-gaussian sample_gaussian)
-(define gaussian-pdf gaussian_pdf) ;; Why was this an ln version? Score computations are done in ln domain, so need ln-score...
+(define gaussian-pdf gaussian_pdf)
+(define gaussian-lnpdf gaussian_lnpdf)
 (define sample-dirichlet sample_dirichlet)
 (define dirichlet-lnpdf dirichlet_lnpdf)
 (define sample-tdist sample_tdist)
