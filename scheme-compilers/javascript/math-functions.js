@@ -58,7 +58,7 @@ function sample_gamma(a,b)
 
     while(true)
     {
-        do{x = sample_gaussian(1);  v = 1+c*x;} while(v <= 0);
+        do{x = sample_gaussian(0,1);  v = 1+c*x;} while(v <= 0);
 
         v=v*v*v;
         u=random();
@@ -75,6 +75,12 @@ function gamma_pdf(x,a,b)
     if(a==1) return Math.exp(-x/b)/b;
     
     return Math.exp((a - 1)*Math.log(x/b) - x/b - log_gamma(a))/b;
+}
+
+// Evaluate log gammma pdf
+function gamma_lnpdf(x,a,b)
+{
+    return (1 - a)*Math.log(x) - x/b - log_gamma(a) - a*Math.log(b);
 }
 
 // Draw a sample from a Binomial distribution
@@ -142,7 +148,7 @@ function sample_beta(a, b)
 
 // Draw a sample from a Gaussian distribution
 // Leva '92 (could be improved, i.e. via Ziggurat method)
-function sample_gaussian(sigma)
+function sample_gaussian(mu,sigma)
 {
     var u, v, x, y, q;
 
@@ -156,15 +162,22 @@ function sample_gaussian(sigma)
     }
     while(q >= 0.27597 && (q > 0.27846 || v*v > -4 * u * u * Math.log(u)))
 
-    return sigma*v/u;
+    return mu + sigma*v/u;
 }
 
 // Evaluate the gaussian distribution
-function gaussian_pdf(x,sigma)
+function gaussian_pdf(x,mu,sigma)
 {
+    x-=mu;
     var asigma = Math.abs(sigma);
     var u = x/asigma;
     return (1/ Math.sqrt(2*Math.PI) * asigma) * Math.exp(-u*u/2);  
+}
+
+// Evaluate the log gaussian distribution
+function gaussian_lnpdf(x,mu,sigma)
+{
+    return -.5*(1.8378770664093453 + Math.log(sigma) + (x - mu)*(x - mu)/sigma);
 }
 
 // Draw a sample from a Dirichlet distribution
@@ -198,12 +211,12 @@ function dirichlet_lnpdf(alpha, theta)
 // Marsaglia '80
 function sample_tdist(nu)
 {
-    if(nu <= 2) return sample_gaussian(1) / sqrt( 2 * sample_gamma(nu/2, 1) / nu);
+    if(nu <= 2) return sample_gaussian(0,1) / sqrt( 2 * sample_gamma(nu/2, 1) / nu);
 
     var a,b,c,t;
     do
     {
-        a = sample_gaussian(1);
+        a = sample_gaussian(0,1);
         b = -1 / (nu/2 - 1) * log1p(-random());
         c = a*a/(nu - 2);
     }
