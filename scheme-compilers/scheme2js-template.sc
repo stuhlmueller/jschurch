@@ -1,4 +1,4 @@
-3;; Broken placeholder constants
+;; Broken placeholder constants
 (define infinity 999999999999)
 (define minus-infinity (- 999999999999))
 (define nan (/ 1 0))
