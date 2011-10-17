@@ -1,9 +1,5 @@
 <!DOCTYPE html>
 <html>
-<body>
-
-<div id="console"></div>
-
 <script type="text/javascript" src="%(scheme2js_runtime_path)s">
 </script>
 
@@ -16,8 +12,21 @@
 <script type="text/javascript" src="%(js_math_path)s">
 </script>
 
+<script type="text/javascript" src="%(js_glmatrix_path)s">
+</script>
+
+<script type="text/javascript" src="%(js_webgl_path)s">
+</script>
+
 <script type="text/javascript" src="%(js_out_path)s">
 </script>
+
+<body onload="webGLStart();">
+
+<div id="console"></div>
+
+
+<canvas id="canvas" style="border: none;" width="500" height="500"></canvas>
 
 </body>
 </html>
