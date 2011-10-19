@@ -1,16 +1,15 @@
-#!r6rs
 
-(library
- (church desugar)
+;(library
+; (church desugar)
 
- (export de-sugar
-         de-sugar-all
-         register-sugar!
-         register-query-sugar)
+; (export de-sugar
+;         de-sugar-all
+;         register-sugar!
+;         register-query-sugar)
 
- (import (rnrs)
-         (church readable-scheme)
-         (scheme-tools srfi-compat :1))
+; (import (rnrs)
+;         (church readable-scheme)
+;         (scheme-tools srfi-compat :1))
  
 ;;;some syntax utils
  (define (mem? sexpr) (tagged-list? sexpr 'mem))
@@ -207,9 +206,9 @@
           (>= (length (rest expr)) 2))) ;;make sure not to try de-sugaring the definition of the query -- queries have at least two subexprs.
    (define (desugar-query expr)
      ;(display expr) (newline)
-     (let*-values ([ (control-part defs) (break (lambda (subexpr) (tagged-list? subexpr 'define)) (drop-right expr 2))]
-                   [ (control-args) (rest control-part)]
-                   [ (query-exp cond-exp) (apply values (take-right expr 2))])
+     (let*-values (( (control-part defs) (break (lambda (subexpr) (tagged-list? subexpr 'define)) (drop-right expr 2)))
+                   ( (control-args) (rest control-part))
+                   ( (query-exp cond-exp) (apply values (take-right expr 2))))
        `(,query-name ,@control-args (lambda () (begin ,@defs (pair ,cond-exp (lambda () ,query-exp)))) )))
    (register-sugar! query? desugar-query 1))
 
@@ -219,11 +218,11 @@
    (and (tagged-list? expr query-name)
         (>= (length (rest expr)) 2))) ;;make sure not to try de-sugaring the definition of the query -- queries have at least two subexprs.
  (define (desugar-tempered-query query-name expr)
-   (let*-values ([(control-part defs) (break (lambda (subexpr) (tagged-list? subexpr 'define)) (drop-right expr 2))]
-                 [(temp-args) (second control-part)]
-                 [(temps) (third control-part)]
-                 [(control-args) (drop control-part 3)]
-                 [(query-exp cond-exp) (apply values (take-right expr 2))])
+   (let*-values (((control-part defs) (break (lambda (subexpr) (tagged-list? subexpr 'define)) (drop-right expr 2)))
+                 ((temp-args) (second control-part))
+                 ((temps) (third control-part))
+                 ((control-args) (drop control-part 3))
+                 ((query-exp cond-exp) (apply values (take-right expr 2))))
      `(,query-name ,temps ,@control-args (lambda ,temp-args (lambda () (begin ,@defs (pair ,cond-exp (lambda () ,query-exp))))) )))
  
  (define (psmc-query? expr)
@@ -344,4 +343,4 @@
 
 
  
- )
+; )

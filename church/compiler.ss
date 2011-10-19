@@ -1,4 +1,3 @@
-#!r6rs
 
 ;; authors: noah goodman
 
@@ -10,17 +9,23 @@
 ;; compiler: srfi 1.
 ;; runtime: gensym, gsl (bound in math-env), srfi 1. (for eval also need compiler + scheme eval.)
 
-(library
- (church compiler)
+;(library
+; (church compiler)
 
- (export compile)
+; (export compile)
 
- (import (rnrs)
-         (scheme-tools srfi-compat :1) ; lists
-         (church readable-scheme)
-         (church desugar)
-         (church header)
-         )
+; (import (rnrs)
+;         (scheme-tools srfi-compat :1) ; lists
+;         (church readable-scheme)
+;         (church desugar)
+;         (church header)
+;         )
+
+;;scheme2js doesn't have load (??)...
+;(load "readable-scheme.ss")
+;(load "desugar.ss")
+;(load "header.ss")
+
 
  ;;list of the primitive routines (defined in header) that need access to address and store.
  (define *threaded-primitives*
@@ -28,9 +33,9 @@
 
  (define (compile top-list external-defs . lazy)
    (let* ((church-sexpr  `(begin
-                            (load "standard-preamble.church")
-                            (load "xrp-preamble.church")
-                            (load "mcmc-preamble.church")
+                            ;(load "standard-preamble.church")
+                            ;(load "xrp-preamble.church")
+                            ;(load "mcmc-preamble.church")
                             ,@top-list))
           (ds-sexpr (remove-dead (de-sugar-all church-sexpr))) ;;desugar and remove unused defs.
           (ds-sexpr (if (eq? #t lazy)
@@ -86,9 +91,9 @@
       ((symbol? sexpr) (church-rename sexpr))
       ;;((symbol? sexpr) (if (not (primitive? sexpr)) (church-rename sexpr) sexpr))
       ;;some compilers can't handle the r6rs inf numbers.
-      ((number? sexpr) (cond ((nan? sexpr) 'nan)
-                             ((= sexpr +inf.0) 'infinity)
-                             ((= sexpr -inf.0) 'minus-infinity)
+      ((number? sexpr) (cond ;((nan? sexpr) 'nan)
+                             ;((= sexpr +inf.0) 'infinity) ;;FIXME!!!
+                             ;((= sexpr -inf.0) 'minus-infinity)
                              (else sexpr)))
       ;;sel-evaluating forms are left alone (assume target language has same primitive types).
       (else sexpr) ))
@@ -201,4 +206,4 @@
  ;;    (else sexpr) ))
 
 
- )
+ ;)
