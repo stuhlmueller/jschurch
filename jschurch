@@ -1,0 +1,51 @@
+#!/usr/bin/python
+import sys
+import re
+import os
+from subprocess import Popen
+from external import optfunc
+from os.path import abspath, dirname, exists, join
+
+load_pattern = r"(\(load\s+\"([^\"]+)\"\s*\))"
+
+def inline(fn, paths):
+    """
+    Recursively inline all occurrences of (load "filename") in the
+    file named "fn", searching all paths in the variable "paths", and
+    return the inlined file contents.
+    """
+    for path in paths:
+        fp = join(path, fn)
+        if exists(fp):
+            s = open(fp).read()
+            break
+    for (sexp, fn2) in re.findall(load_pattern, s):
+        paths2 = [abspath(dirname(fn2))] + paths
+        s = s.replace(sexp, inline(fn2, paths2))
+    return s
+
+def call(cmd, verbose=False, allow_fail=False):
+    """
+    Run cmd in shell.
+    """
+    if verbose:
+        print cmd
+    p = Popen(cmd, shell=True)
+    p.communicate()
+    status = p.returncode
+    if status != 0 and not allow_fail:
+        print "command failed:\n%s" % cmd
+        exit()
+    else:
+        return status
+
+@optfunc.main
+def main():
+    root = abspath(dirname(sys.argv[0]))
+    print("Combining Church compiler code into single file...")
+    inlined_compiler_src = inline("church/compiler.ss", [root, join(root, "church/")])
+    f = open("compiled/combined.tmp.ss", "w")
+    f.write(inlined_compiler_src)
+    f.close()
+    print("Compiling to Javascript...")
+    call("java -jar external/scheme2js/scheme2js.jar -o compiled/church-compiler.js compiled/combined.tmp.ss")

@@ -212,7 +212,7 @@
 ;   (lambda (probs) (first (fold discrete-helper (list 0 0 0.0) probs)))
 ;   (lambda (args val) (if (and (number? val) (< val (+ 1 (length (first args)))))
 ;                          (log (list-elt (first args) val))
-;                          -inf.0)) ))
+;                          minus-infinity)) ))
 ;
 ;(define (discrete-helper next-weight current)
 ;  (let ((current-draw (first current))
@@ -316,14 +316,14 @@
  ;; (define sample->log-q (lambda (x) (rest (second x))))
 
  ;; (define (not-rejected? sample)
- ;;   (not (= (sample->log-p sample) -inf.0)))
+ ;;   (not (= (sample->log-p sample) minus-infinity)))
 
  ;; (define (importance-marginal samples)
  ;;   (let* ([accepted-samples (filter not-rejected? samples)]
  ;;          [weights (map (lambda (s) (exp (- (sample->log-p s) (sample->log-q s)))) samples)]
  ;;          [wsum (/ (sum weights) (length samples))])
  ;;     (cond ((nan? wsum) +nan.0)
- ;;           ((= wsum 0.0) -inf.0)
+ ;;           ((= wsum 0.0) minus-infinity)
  ;;           (else (log wsum)))))
 
 

@@ -21,11 +21,17 @@
 ;         (church header)
 ;         )
 
-;;scheme2js doesn't have load (??)...
-;(load "readable-scheme.ss")
-;(load "desugar.ss")
-;(load "header.ss")
+(load "srfi-1.scm")
 
+(load "readable-scheme.ss")
+
+(load "desugar.ss")
+
+(load "header.ss")
+
+(define infinity (/ 0.0))
+
+(define minus-infinity (/ -0.0))
 
  ;;list of the primitive routines (defined in header) that need access to address and store.
  (define *threaded-primitives*
@@ -33,9 +39,9 @@
 
  (define (compile top-list external-defs . lazy)
    (let* ((church-sexpr  `(begin
-                            ;(load "standard-preamble.church")
-                            ;(load "xrp-preamble.church")
-                            ;(load "mcmc-preamble.church")
+                            (load "standard-preamble.church")
+                            (load "xrp-preamble.church")
+                            (load "mcmc-preamble.church")
                             ,@top-list))
           (ds-sexpr (remove-dead (de-sugar-all church-sexpr))) ;;desugar and remove unused defs.
           (ds-sexpr (if (eq? #t lazy)
