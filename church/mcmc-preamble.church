@@ -8,6 +8,14 @@
 
 ;;;kernels (mcmc transition distributions) and proposal distributions
 
+(define log-flip* (lambda w (if (null? w)
+                (< (random-real) 0.5)
+                (< (log (random-real)) (car w)))))
+
+(define (uniform-draw* lst)
+  (if (null? lst) '() 
+  (list-ref lst (random-integer (length lst)))))
+
 (define (proposable-xrps state proposable?)
   (filter proposable? (addbox->values (mcmc-state->xrp-draws state))))
 
@@ -17,7 +25,7 @@
       (let ((proposal-xrps (proposable-xrps state proposable?)))
         (if (null? proposal-xrps)
             (list 0.0 state)
-            (let* ((chosen-xrp (uniform-draw proposal-xrps))
+            (let* ((chosen-xrp (uniform-draw* proposal-xrps))
                    (ret1 ((xrp-draw-proposer chosen-xrp) state))
                    (proposed-val (first ret1))
                    (proposal-fw-score (second ret1))
@@ -93,7 +101,7 @@
            (proposal-state (second ret))
            (old-p (scorer state))
            (new-p (scorer proposal-state))
-           (accept (log-flip (min 0.0 (+ (- new-p old-p) bw/fw))))
+           (accept (log-flip* (min 0.0 (+ (- new-p old-p) bw/fw))))
            ;(dummy (for-each display (list "new p  " (/ (- new-p (log 0.3)) (log 0.7)) " old-p  " (/ (- old-p (log 0.3)) (log 0.7)) " bw/fw  " bw/fw "        \n")))
            ;(dummy (if accept (display "--accept--\n") (display "--reject--\n")))
            (dummy (reset-store-xrp-draws))) ;;FIXME!! this is to avoid accumulating xrp-draws...
