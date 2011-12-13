@@ -161,13 +161,18 @@
 
 (define (make-symmetric-dirichlet-discrete N hyp) (make-dirichlet-discrete (make-list N hyp)))
 
-(define (make-CRP alpha) (make-xrp 'CRP
+(define (make-CRP alpha . opt) (make-xrp 'CRP
                                    (lambda (stats hyperparam args) ;;sampler
                                      (let* ((count-map stats)
                                             (counts (pair hyperparam (map rest count-map)))
                                             (total-counts (apply + counts))
                                             (probs (map (lambda (c) (/ c total-counts)) counts))
-                                            (table-index (sample-discrete probs)))
+                                            (table-index (sample-discrete probs))
+                                            ;(d-hyp (begin (display "[crp:hyperparam] ") (display hyperparam) (display "\n") ))
+                                            ;(d-stat (begin (display "[crp:stats] ") (display stats) (display "\n") ))
+                                            ;(d-args (begin (display "[crp:args] ") (display args) (display "\n") ))
+                                            )
+                                       (if (member 'stickemup args) (list count-map count-map (list-ref probs table-index)) ; CHANGEDBYLONG
                                        (if (= table-index 0)
                                            ;;this customer sits at a new table:
                                            (let* ((table-symbol (gensym));(make-table-label))
@@ -186,7 +191,7 @@
                                              (list table-symbol
                                                    new-count-map
                                                    (list-ref probs table-index)))
-                                           )))
+                                           ))))
                                    (lambda (value stats hyperparam args) ;;incr-stats
                                      (let* ((count-map stats)
                                             (counts (pair hyperparam (map rest count-map)))
@@ -232,7 +237,7 @@
                                                        (/ hyperparam (+ hyperparam (apply + counts) (- 1)))
                                                        (/ new-table-count (+ hyperparam (apply + counts) (- 1)))))))))
                                    'CRP-scorer
-                                   '()
+                                   (if (null? opt) '() (first opt))
                                    alpha
                                    '();CRP-uniform-proposer
                                    '();CRP-support
@@ -243,3 +248,14 @@
   (let ((augmented-proc (mem (lambda (args part) (apply proc args))))
         (crps (mem (lambda (args) (make-CRP alpha)))))
     (lambda argsin (augmented-proc argsin ((crps argsin))))))
+
+(define (robbable-DPmem alpha proc)
+  (let ((augmented-proc (mem (lambda (args part) (apply proc args))))
+        (crps (mem (lambda (args) (make-CRP alpha)))))
+    (lambda argsin
+      (if (member 'stickemup argsin)
+          (let ((args (remove 'stickemup argsin)))
+               (map
+                (lambda (table) (list (augmented-proc args (car table) ) (cdr table) ))
+                ((crps args) 'stickemup) ) )
+      (augmented-proc argsin ((crps argsin)))))) )
