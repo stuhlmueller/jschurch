@@ -32,6 +32,7 @@
  (rnrs mutable-pairs) ;;because the header uses set-car!
  (scheme-tools srfi-compat :1) ;;provides some list functions that are used.
  (srfi :19) ;;date+time for inference timing
+ (srfi :48)
  (rename (only (ikarus)
                gensym ;;this is needed.
                pretty-print
