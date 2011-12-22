@@ -205,10 +205,13 @@
      (and (tagged-list? expr query-name)
           (>= (length (rest expr)) 2))) ;;make sure not to try de-sugaring the definition of the query -- queries have at least two subexprs.
    (define (desugar-query expr)
-     ;(display expr) (newline)
-     (let*-values (( (control-part defs) (break (lambda (subexpr) (tagged-list? subexpr 'define)) (drop-right expr 2)))
-                   ( (control-args) (rest control-part))
-                   ( (query-exp cond-exp) (apply values (take-right expr 2))))
+     (define (not-define? subexpr)
+       (not (tagged-list? subexpr 'define)))
+     (let* ([control-args (rest (take-while not-define? expr))]
+            [defs+query+cond (drop-while not-define? expr)]
+            [defs (drop-right defs+query+cond 2)]
+            [query-exp (list-ref defs+query+cond (- (length defs+query+cond) 2))]
+            [cond-exp (last defs+query+cond)])
        `(,query-name ,@control-args (lambda () (begin ,@defs (pair ,cond-exp (lambda () ,query-exp)))) )))
    (register-sugar! query? desugar-query 1))
 
