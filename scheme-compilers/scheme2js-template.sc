@@ -61,8 +61,8 @@
 (define current-date (lambda args #f))
 (define exact->inexact (lambda (x) x))
 (define inexact->exact (lambda (x) x))
-(define (display x) (document.write x))
-(define pretty-print display)
+;; (define (display x) (document.write x))
+;; (define pretty-print display)
 
 (define scheme-gensym gensym)
 
