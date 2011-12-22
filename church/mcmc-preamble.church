@@ -129,20 +129,8 @@
 
 ;;;standard queries
 (define (repeated-mcmc-query-core initializer kernel num-samples)
-  (begin
-    (when inference-timing
-          (display "initializing... \n"))
-    (let ([init-state (initializer)])
-      (when inference-timing
-            (display "initialized: ")
-            (display (current-date))
-            (display "\n"))
-      (let ([ret (mcmc-loop kernel init-state num-samples '())])
-        (when inference-timing
-              (display "done: ")
-              (display (current-date))
-              (display "\n"))
-        ret))))
+  (let ([init-state (initializer)])
+    (mcmc-loop kernel init-state num-samples '())))
 
 (define (mcmc-loop kernel state samples-left samples)
   (if (< samples-left 1)
