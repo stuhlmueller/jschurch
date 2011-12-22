@@ -6,7 +6,19 @@ from subprocess import Popen
 from external import optfunc
 from os.path import abspath, dirname, exists, join
 
-load_pattern = r"(\(load\s+\"([^\"]+)\"\s*\))"
+S2JS_PORTS = """
+    SC_DEFAULT_OUT = new sc_GenericOutputPort(console.log);
+    SC_ERROR_OUT = SC_DEFAULT_OUT;
+"""
+
+JS_TEMPLATE = S2JS_PORTS + """
+    scmExpr = sc_read(new sc_StringInputPort("(" + "%(church_prog)s" + ")"));
+    sc_forEach(sc_print, compile(scmExpr, null));
+"""
+
+SCM_TEMPLATE = open("scheme-compilers/scheme2js-template.sc").read()
+
+LOAD_PATTERN = r"(\(load\s+\"([^\"]+)\"\s*\))"
 
 def inline(fn, paths):
     """
@@ -19,7 +31,7 @@ def inline(fn, paths):
         if exists(fp):
             s = open(fp).read()
             break
-    for (sexp, fn2) in re.findall(load_pattern, s):
+    for (sexp, fn2) in re.findall(LOAD_PATTERN, s):
         paths2 = [abspath(dirname(fn2))] + paths
         s = s.replace(sexp, inline(fn2, paths2))
     return s
@@ -39,13 +51,98 @@ def call(cmd, verbose=False, allow_fail=False):
     else:
         return status
 
-@optfunc.main
-def main():
+def combine_files(input_files, output_filename, sep="\n\n"):
+    strs = [open(f).read() for f in input_files]
+    output_file = open(output_filename, "w")
+    output_file.write(sep.join(strs))
+    output_file.close()
+
+def js_escape_newlines(code):
+    return re.sub("\n", "\\\n", code)
+
+
+def make():
+    """ Builds the Church compiler in Javascript using scheme2js. """
     root = abspath(dirname(sys.argv[0]))
+    rooted = lambda path: os.path.join(root, path)
+
     print("Combining Church compiler code into single file...")
-    inlined_compiler_src = inline("church/compiler.ss", [root, join(root, "church/")])
-    f = open("compiled/combined.tmp.ss", "w")
+    inlined_compiler_src = inline(rooted("church/compiler.ss"), [root, rooted("church/")])
+    church_compiler_scm_filename = rooted("compiled/church-compiler.tmp.ss")
+    f = open(church_compiler_scm_filename, "w")
     f.write(inlined_compiler_src)
     f.close()
+
     print("Compiling to Javascript...")
-    call("java -jar external/scheme2js/scheme2js.jar -o compiled/church-compiler.js compiled/combined.tmp.ss")
+    church_compiler_filename = rooted("compiled/church-compiler.js")
+    call("java -jar external/scheme2js/scheme2js.jar -o %s %s" % (church_compiler_filename,
+                                                                  church_compiler_scm_filename))
+
+    print("Done.")
+
+    
+def run(file):
+    """
+    Given a Church file, compiles it to Scheme using the [Church
+    compiler in JS], then compiles it to Javascript using scheme2js
+    and runs it.
+    """
+    root = abspath(dirname(sys.argv[0]))
+    rooted = lambda path: os.path.join(root, path)
+
+    print("Reading Church code...")    
+    church_input_src = open(file).read()    
+
+    print("Combining wrapped code and libraries into single file...")
+    church_pre_filename = rooted("compiled/church-prog-pre.tmp.js")
+    church_pre = open(church_pre_filename, "w")
+    church_pre.write(JS_TEMPLATE % { "church_prog" : js_escape_newlines(church_input_src) })
+    church_pre.close()
+    church_with_compiler_filename = rooted("compiled/church-with-compiler.tmp.js")
+    combine_files([rooted("external/scheme2js/runtime.js"),
+                   rooted("compiled/church-compiler.js"),
+                   church_pre_filename],
+                  church_with_compiler_filename)
+
+    print("Compiling Church code to Scheme...")
+    scm_src_filename = rooted("compiled/church-prog.tmp.ss")
+    call("node %s > %s" % (church_with_compiler_filename, scm_src_filename))
+
+    print("Wrapping Scheme code in template...")
+    scm_src = open(scm_src_filename).read()
+    scm_src_file = open(scm_src_filename, "w")
+    scm_src_file.write(SCM_TEMPLATE % { "churchprogram" : scm_src })
+    scm_src_file.close()
+
+    print("Compiling Scheme code to js using scheme2js...")
+    church_prog_core_filename = rooted("compiled/church-prog-core.tmp.js")    
+    call("java -jar external/scheme2js/scheme2js.jar -o %s %s" % (church_prog_core_filename, scm_src_filename))
+
+    print("Setting output ports...")
+    church_prog_core_src = open(church_prog_core_filename).read()
+    church_prog_core_file = open(church_prog_core_filename, "w")
+    church_prog_core_file.write(S2JS_PORTS + "\n\n" + church_prog_core_src)
+    church_prog_core_file.close()
+
+    print("Adding libraries")
+    libs = ["external/scheme2js/runtime.js",
+            "scheme-compilers/javascript/math-functions.js",
+            "scheme-compilers/javascript/random/MRG32k3a.js",
+            "scheme-compilers/javascript/random/Mash.js",
+            "scheme-compilers/javascript/random/KISS07.js",
+            "scheme-compilers/javascript/random/LFIB4.js",
+            "scheme-compilers/javascript/random/Xorshift03.js",
+            "scheme-compilers/javascript/random/Alea.js",
+            "scheme-compilers/javascript/random/Kybos.js",
+            "scheme-compilers/javascript/random/LFib.js",
+            "compiled/church-prog-core.tmp.js"]
+    church_prog_filename = rooted("compiled/church-prog.js")
+    combine_files([rooted(lib_path) for lib_path in libs],
+                  church_prog_filename)
+
+    print("Running js in node...")
+    call("node %s" % church_prog_filename)
+
+    
+if __name__ == "__main__":
+    optfunc.run([make, run])
