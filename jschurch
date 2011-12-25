@@ -60,14 +60,17 @@ def combine_files(input_files, output_filename, sep="\n\n"):
 def js_escape_newlines(code):
     return re.sub("\n", "\\\n", code)
 
+def rooted(path):
+    root = abspath(dirname(sys.argv[0]))
+    return os.path.join(root, path)
+
 
 def make():
     """ Builds the Church compiler in Javascript using scheme2js. """
-    root = abspath(dirname(sys.argv[0]))
-    rooted = lambda path: os.path.join(root, path)
 
     print("Combining Church compiler code into single file...")
-    inlined_compiler_src = inline(rooted("church/compiler.ss"), [root, rooted("church/")])
+    inlined_compiler_src = inline(rooted("church/compiler.ss"),
+                                  [abspath(dirname(sys.argv[0])), rooted("church/")])
     church_compiler_scm_filename = rooted("compiled/church-compiler.tmp.ss")
     f = open(church_compiler_scm_filename, "w")
     f.write(inlined_compiler_src)
@@ -78,7 +81,33 @@ def make():
     call("java -jar external/scheme2js/scheme2js.jar -o %s %s" % (church_compiler_filename,
                                                                   church_compiler_scm_filename))
 
-    print("Done.")
+    print("Building JS compiler done.")
+
+
+def webservice():
+    """
+    Build the Church compiler in Javascript, then combine all
+    Javascript files necessary for use of webservice into single file.
+    """
+    make()
+    print("Combining js files...")
+    js_paths = ["external/scheme2js/runtime.js",
+                "compiled/church-compiler.js",
+                "external/jquery-1.7.min.js",
+                "scheme-compilers/javascript/random/Alea.js",
+                "scheme-compilers/javascript/random/KISS07.js",
+                "scheme-compilers/javascript/random/Kybos.js",
+                "scheme-compilers/javascript/random/LFIB4.js",
+                "scheme-compilers/javascript/random/LFib.js",
+                "scheme-compilers/javascript/random/MRG32k3a.js",
+                "scheme-compilers/javascript/random/Mash.js",
+                "scheme-compilers/javascript/random/Xorshift03.js",
+                "scheme-compilers/scheme2js-template.js",
+                "scheme-compilers/javascript/math-functions.js",
+                "scheme-compilers/javascript/jschurch-webservice.js"]
+    combine_files([rooted(path) for path in js_paths],
+                  rooted("compiled/jschurch-all.js"))
+    print("Combining files done.")
 
     
 def run(file):
@@ -87,9 +116,6 @@ def run(file):
     compiler in JS], then compiles it to Javascript using scheme2js
     and runs it.
     """
-    root = abspath(dirname(sys.argv[0]))
-    rooted = lambda path: os.path.join(root, path)
-
     print("Reading Church code...")    
     church_input_src = open(file).read()    
 
@@ -145,4 +171,4 @@ def run(file):
 
     
 if __name__ == "__main__":
-    optfunc.run([make, run])
+    optfunc.run([make, run, webservice])
