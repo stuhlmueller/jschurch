@@ -95,7 +95,7 @@ var scheme2jsTemplate = ";; Broken placeholder constants\n\
 \n\
 ;;;for score gradients (currently not working), requires AD:\n\
 (define (*with-score-gradient*) #f)\n\
-(define (xy-gradient-R x) (error 'grad-undefined \n\"xy-gradient-R undefined\n\"))\n\
+(define (xy-gradient-R x) (error 'grad-undefined \n\"xy-gradient-R undefined\"))\n\
 (define (tape? x) #f)\n\
 (define (tapify x) x)\n\
 (define (untapify x) x)\n\

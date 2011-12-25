@@ -37,9 +37,8 @@
             // Compile to js using scheme2js
             compileSchemeToJS(wrappedSchemeExpr, 
                               function(compiledCode){
-                                  alert(compiledCode);
                                   // Set output ports
-                                  SC_DEFAULT_OUT = new sc_GenericOutputPort(console.log);
+                                  SC_DEFAULT_OUT = new sc_GenericOutputPort(function(s){$("#churchOut").val(s)});
                                   SC_ERROR_OUT = SC_DEFAULT_OUT;
                                   // Run compiled file
                                   eval(compiledCode);
@@ -59,7 +58,7 @@
     <input type="submit" id="churchCompile" onClick="javascript: ">
     </input>
 
-    <textarea id="churchSrcCompiled" style="width: 500px; height: 150px; display: block">
+    <textarea id="churchOut" style="width: 500px; height: 150px; display: block">
     </textarea>
 
   </body>
