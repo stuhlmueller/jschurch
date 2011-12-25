@@ -18,6 +18,20 @@ JS_TEMPLATE = S2JS_PORTS + """
 
 SCM_TEMPLATE = open("scheme-compilers/scheme2js-template.sc").read()
 
+SCM_TEMPLATE_JSWRAPPER = """if (!String.prototype.supplant) {
+  String.prototype.supplant = function (o) {
+    return this.replace(/{([^{}]*)}/g,
+                        function (a, b) {
+                          var r = o[b];
+                          return typeof r === 'string' || typeof r === 'number' ? r : a;
+                        }
+                       );
+  };
+}
+
+var scheme2jsTemplate = "%(scheme2js_template)s";
+"""
+
 LOAD_PATTERN = r"(\(load\s+\"([^\"]+)\"\s*\))"
 
 def inline(fn, paths):
@@ -90,6 +104,14 @@ def webservice():
     Javascript files necessary for use of webservice into single file.
     """
     make()
+    print("Generating scheme2js-template.js...")
+    s2js_tpl = SCM_TEMPLATE.replace('"', '\\"')
+    s2js_tpl = s2js_tpl.replace("\n", "\\n\\\n")
+    s2js_tpl = SCM_TEMPLATE_JSWRAPPER % { "scheme2js_template" : s2js_tpl}
+    s2js_tpl = s2js_tpl.replace("%(churchprogram)s", "{churchprogram}")
+    f = open(rooted("compiled/scheme2js-template.js"), "w")
+    f.write(s2js_tpl)
+    f.close()
     print("Combining js files...")
     js_paths = ["external/scheme2js/runtime.js",
                 "compiled/church-compiler.js",
@@ -102,7 +124,7 @@ def webservice():
                 "scheme-compilers/javascript/random/MRG32k3a.js",
                 "scheme-compilers/javascript/random/Mash.js",
                 "scheme-compilers/javascript/random/Xorshift03.js",
-                "scheme-compilers/scheme2js-template.js",
+                "compiled/scheme2js-template.js",
                 "scheme-compilers/javascript/math-functions.js",
                 "scheme-compilers/javascript/jschurch-webservice.js"]
     combine_files([rooted(path) for path in js_paths],
