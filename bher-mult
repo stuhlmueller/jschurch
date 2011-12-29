@@ -37,7 +37,7 @@ def parse_params(params):
 def compute(pair):
     exec_str, verbose = pair
     pre = datetime.now()
-    return_str =  call(exec_str, verbose)
+    return_str =  call(exec_str, verbose, True)
     post = datetime.now()
     delta = post-pre
     seconds = delta.seconds + delta.microseconds/1000000.0
