@@ -16,7 +16,7 @@ def call(cmd, verbose=False, allow_fail=False):
     p = Popen(cmd, shell=True)
     p.communicate()
     status = p.returncode
-    if status != 0 and not allow_fail:
+    if status != 0:
         if not allow_fail:
             print "command failed:\n%s" % cmd
             exit()
