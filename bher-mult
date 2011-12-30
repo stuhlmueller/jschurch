@@ -34,7 +34,7 @@ def parse_params(params):
     if params == "":
         return [{None: None}]
     else:
-        dimensions = params.split(";")
+        dimensions = params.split(" ")
         return map(parse_dimension, dimensions)
 
 def compute(pair):
@@ -117,7 +117,7 @@ Examples:
     
     compute_space = []
 
-    dimensions = map(lambda x: x.split(":")[0], set.split(";"))
+    dimensions = map(lambda x: x.split(":")[0], set.split(" "))
 
     settings["out_path"] = abspath(file) + ".ss"
     vprint("removing old compilation files (if existent)", verbose)
@@ -134,8 +134,9 @@ Examples:
     vprint("processing input file", verbose)
     code = open(file).read() % reInterpolate
     f = open(file + ".template", "w")
-    f.write(code)
-    f.write("\n".join(map(lambda dim: "(define __INTERPOLATE__" + dim + " 1.2345)", dimensions)))
+    f.write(" ".join(map(lambda dim: "(define __INTERPOLATE__" + dim + " 1.2345)", dimensions)))
+    f.write("\n\n"+code)
+    
     f.close()
 
     vprint("compiling church->scheme", verbose)
