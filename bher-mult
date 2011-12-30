@@ -17,8 +17,11 @@ def call(cmd, verbose=False, allow_fail=False):
     p.communicate()
     status = p.returncode
     if status != 0 and not allow_fail:
-        print "command failed:\n%s" % cmd
-        exit()
+        if not allow_fail:
+            print "command failed:\n%s" % cmd
+            exit()
+        else:
+            return call(cmd, verbose, allow_fail)
     else:
         return status
 
@@ -31,7 +34,7 @@ def parse_params(params):
     if params == "":
         return [{None: None}]
     else:
-        dimensions = params.split(" ")
+        dimensions = params.split(";")
         return map(parse_dimension, dimensions)
 
 def compute(pair):
@@ -101,59 +104,64 @@ Examples:
     settings = {
         "bher_path" : bher_path,
         "in_path" : abspath(file),
+        "in_dir" : dirname(abspath(file)),
         ##"header_path" : abspath(os.path.join(bher_path, compilers[compiler]["header"])),
         ##"trailer_path" : abspath(os.path.join(bher_path, compilers[compiler]["trailer"])),
         "template_path" : abspath(os.path.join(bher_path, compilers[compiler]["template"])),
         "compiler" : abspath(os.path.join(bher_path, "church/church-compiler.ss")),
         "debug" : debug and "--debug" or "",
         "pretty" : pretty and "T" or "F",
-        "ext" : ext and abspath(ext) or ""
+        "ext" : ext and abspath(ext) or "",
+        "file": file
     }
     
     compute_space = []
+
+    dimensions = map(lambda x: x.split(":")[0], set.split(";"))
+
+    settings["out_path"] = abspath(file) + ".ss"
+    vprint("removing old compilation files (if existent)", verbose)
+    call("rm -f '%(out_path)s'" % settings, verbose, allow_fail=True)
+    call("rm -f '%(file)s.template'" % settings, verbose, allow_fail=True)
+    call("cd %(in_dir)s; ls %(file)s.* | xargs rm -f" % settings, verbose, allow_fail=True)
+    
+    
+    ## replace %(foo)s with __INTERPOLATE__foo
+    reInterpolate = {}
+    for dim in dimensions:
+         reInterpolate[dim] = "__INTERPOLATE__" + dim
+
+    vprint("processing input file", verbose)
+    code = open(file).read() % reInterpolate
+    f = open(file + ".template", "w")
+    f.write(code)
+    f.write("\n".join(map(lambda dim: "(define __INTERPOLATE__" + dim + " 1.2345)", dimensions)))
+    f.close()
+
+    vprint("compiling church->scheme", verbose)
+    call(("cd '%(bher_path)s' && vicare %(debug)s --r6rs-script '%(compiler)s' " +
+          "'%(file)s.template' '%(out_path)s.template' '%(ext)s' %(pretty)s") % settings, verbose)
+          
+    # prepare to splice in the compiled code
+    settings["churchprogram"] = open('%(out_path)s.template' % settings).read()
+
+    vprint("wrapping with compiler-specific template", verbose)
+    template = open(settings["template_path"]).read()
+    open(settings["out_path"], "w").write(template % settings)
     
     for (i,dicts) in enumerate(itertools.product(*params)):
+        settings["i"] = i
+        
         # combine the "unitary" dictionaries
         dimensionvalues = reduce(lambda x,y: dict(x.items() + y.items()), dicts)
-
-        if dicts[0]:
-            vprint("Pre-processing: %s" % dimensionvalues,verbose) 
-            settings["out_path"] = abspath(file) + "." + str(i) + ".ss"
-        else:
-            settings["out_path"] = abspath(file) + ".ss"
-
-        vprint("removing old compilation files (if existent)", verbose)
-        call("rm -f '%(out_path)s'" % settings, verbose, allow_fail=True)
-        call("rm -f '%(out_path)s.tmp'" % settings, verbose, allow_fail=True)
-        call("rm -f '%(in_path)s.tmp'" % settings, verbose, allow_fail=True)
-
-        vprint("processing input file", verbose)
-        if dicts[0]:
-            code = open(file).read() % dimensionvalues
-            f = open(file + ".tmp", "w")
-            f.write(code)
-            f.close()
-        else:
-            call("cp '%(in_path)s' '%(in_path)s.tmp'" % settings, verbose)
-
-        vprint("compiling church->scheme", verbose)
-        call(("cd '%(bher_path)s' && vicare %(debug)s --r6rs-script '%(compiler)s' " +
-              "'%(in_path)s.tmp' '%(out_path)s.tmp' '%(ext)s' %(pretty)s") % settings, verbose)
-        settings["churchprogram"] = open("%(out_path)s.tmp" % settings).read()
-        call("rm -f '%(in_path)s.tmp'" % settings, verbose, allow_fail=True)
-        call("rm -f '%(out_path)s.tmp'" % settings, verbose, allow_fail=True)
-
-        ## vprint("adding compiler-specific header & footer", verbose)
-        ## call(("cat '%(header_path)s' '%(out_path)s.tmp' '%(trailer_path)s' " +
-        ##       "> '%(out_path)s'") % settings, verbose)
-        ## call("rm -f '%(out_path)s.tmp'" % settings, verbose, allow_fail=True)
-
-        vprint("wrapping with compiler-specific template", verbose)
-        template = open(settings["template_path"]).read()
-        open(settings["out_path"], "w").write(template % settings)
+        sedCmd = "sed "
+        for k,v in dimensionvalues.items():
+            sedCmd += " -e 's/(church-__INTERPOLATE__%(k)s 1.2345)//' -e \"s/church-__INTERPOLATE__%(k)s/%(v)s/\"" % {'k': k, 'v': v}
+        sedCmd += (" %(file)s.ss > %(file)s.%(i)s.ss") % settings
+        call(sedCmd, verbose, allow_fail=True)
         
-        compute_space.append(["vicare %(debug)s --r6rs-script '%(out_path)s'" % settings, verbose])
-        
+        compute_space.append(["vicare %(debug)s --r6rs-script '%(file)s.%(i)s.ss'" % settings, verbose])
+    
     if __name__ == '__main__':
         if not (numcores == None):
             numcores = int(numcores)
