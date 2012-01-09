@@ -59,7 +59,8 @@ compilers = {
 @optfunc.arghelp('set', 'run church file with multiple parameter settings')
 @optfunc.arghelp('keep', 'do not delete compiled file')
 @optfunc.arghelp('compiler', 'compiler to use (available: vicare, biwa, scheme2js)')
-def main(file, verbose=False, debug=False, keep=False, pretty=False, time=False, norun=False, ext="", set="", compiler="vicare"):
+@optfunc.arghelp('only-compile', "only compile, don't run")
+def main(file, verbose=False, debug=False, keep=False, pretty=False, time=False, norun=False, ext="", set="", compiler="vicare", only=False):
     """Usage: %prog <file> [options]
 
 Examples:
@@ -132,6 +133,9 @@ Examples:
         vprint("wrapping with compiler-specific template", verbose)
         template = open(settings["template_path"]).read()
         open(settings["out_path"], "w").write(template % settings)
+
+        if only:
+            exit()
 
         if compilers[compiler]["runnable"]:
             vprint("running generated scheme ", verbose)
