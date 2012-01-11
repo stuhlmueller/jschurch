@@ -71,8 +71,8 @@ def combine_files(input_files, output_filename, sep="\n\n"):
     output_file.write(sep.join(strs))
     output_file.close()
 
-def js_escape_newlines(code):
-    return re.sub("\n", "\\\n", code)
+def js_escape(code):
+    return re.sub("\"", "\\\"", re.sub("\n", "\\\n", code))
 
 def rooted(path):
     root = abspath(dirname(sys.argv[0]))
@@ -144,7 +144,7 @@ def run(file):
     print("Combining wrapped code and libraries into single file...")
     church_pre_filename = rooted("compiled/church-prog-pre.tmp.js")
     church_pre = open(church_pre_filename, "w")
-    church_pre.write(JS_TEMPLATE % { "church_prog" : js_escape_newlines(church_input_src) })
+    church_pre.write(JS_TEMPLATE % { "church_prog" : js_escape(church_input_src) })
     church_pre.close()
     church_with_compiler_filename = rooted("compiled/church-with-compiler.tmp.js")
     combine_files([rooted("external/scheme2js/runtime.js"),
