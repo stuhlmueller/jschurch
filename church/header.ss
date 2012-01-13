@@ -1,4 +1,3 @@
-#!r6rs
 
 ;; authors: noah goodman
 
@@ -14,15 +13,15 @@
 ;;NOTE: primitive symbols not otherwise defined are assumed to be provided by the target language. this includes, for example, a bunch of random sampling/scoring functions that xrp-preamble will want.
 
 
-(library
- (church header)
+;(library
+; (church header)
 
- (export generate-header)
+; (export generate-header)
 
- (import (rnrs)
-         (scheme-tools srfi-compat :1) ; lists
-         (church readable-scheme)
-         )
+; (import (rnrs)
+;         (scheme-tools srfi-compat :1) ; lists
+;         (church readable-scheme)
+;         )
 
  (define *no-forcing* true)
  (define *AD* true) ;;when AD is true, continuous XRP return values will be tapified.
@@ -369,4 +368,4 @@
      )
    )
 
- )
+; )
