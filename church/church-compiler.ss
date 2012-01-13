@@ -1,4 +1,4 @@
-#!r6rs
+#!r5rs
 
 ;; get filename from command line
 ;; read source code from file

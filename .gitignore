@@ -3,5 +3,5 @@
 *.church.ss
 *.church.js
 external/optfunc.pyc
-
+*tmp*
 external/__init__.pyc

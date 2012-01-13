@@ -2683,13 +2683,9 @@ sc_Reader.prototype.read = function() {
 	    }
 	}
     };
-    // original scheme2js readQuote seems to be missing symbol prefix
     function readQuote() {
-	return sc_cons(sc_SYMBOL_PREFIX + "quote", sc_cons(this.read(), null));
+        return sc_cons("quote", sc_cons(this.read(), null));
     };
-    // function readQuote() {
-    //     return sc_cons("quote", sc_cons(this.read(), null));
-    // };
     function readVector() {
 	// opening-parenthesis is already consumed
 	var a = new Array();
