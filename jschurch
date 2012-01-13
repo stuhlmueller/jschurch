@@ -16,6 +16,17 @@ JS_TEMPLATE = S2JS_PORTS + """
     sc_forEach(sc_print, compile(scmExpr, null));
 """
 
+JS_ISOLATOR = """
+var jsChurch = (
+  function(){
+    %(code)s
+    return {
+      "eval" : evalChurchCode
+    };
+  })();
+var evalChurchCode = jsChurch.eval;
+"""
+
 SCM_TEMPLATE = open("scheme-compilers/scheme2js-template.sc").read()
 
 SCM_TEMPLATE_JSWRAPPER = """if (!String.prototype.supplant) {
@@ -129,6 +140,14 @@ def webservice():
                 "scheme-compilers/javascript/jschurch-webservice.js"]
     combine_files([rooted(path) for path in js_paths],
                   rooted("compiled/jschurch-all.js"))
+    print("Wrapping code with isolator...")
+    f = open(rooted("compiled/jschurch-all.js"))
+    combined_code = f.read()
+    f.close()
+    isolated_code = JS_ISOLATOR % { "code" : combined_code}
+    f = open(rooted("compiled/jschurch-all.js"), "w")
+    f.write(isolated_code)
+    f.close()
     print("Combining files done.")
 
     
