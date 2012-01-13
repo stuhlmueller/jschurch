@@ -46,7 +46,7 @@
 (define (rejection-initializer normal-form-proc)
   (let loop ()
     (let ((rejectioninit-proposal-state (first (counterfactual-update (make-initial-mcmc-state) normal-form-proc))))
-      (if (= -inf.0 (mcmc-state->score rejectioninit-proposal-state))
+      (if (= minus-infinity (mcmc-state->score rejectioninit-proposal-state))
           (loop) ;;don't care about bw/fw for init.
           rejectioninit-proposal-state))))
 
@@ -65,7 +65,7 @@
                                (rejection-initializer normal-form-proc))])
     (let next-temp ([temps (rest temps:high->low)]
                     [mcmc-state initial-state])
-      (if (= -inf.0 (mcmc-state->score mcmc-state))
+      (if (= minus-infinity (mcmc-state->score mcmc-state))
           (begin
             (when verbose-init
                   (display "annealing-initializer: failed, restarting at top ...\n"))
@@ -137,20 +137,8 @@
 
 ;;;standard queries
 (define (repeated-mcmc-query-core initializer kernel num-samples)
-  (begin
-    (when inference-timing
-          (display "initializing... \n"))
-    (let ([init-state (initializer)])
-      (when inference-timing
-            (display "initialized: ")
-            (display (current-date))
-            (display "\n"))
-      (let ([ret (mcmc-loop kernel init-state num-samples '())])
-        (when inference-timing
-              (display "done: ")
-              (display (current-date))
-              (display "\n"))
-        ret))))
+  (let ([init-state (initializer)])
+    (mcmc-loop kernel init-state num-samples '())))
 
 (define (mcmc-loop kernel state samples-left samples)
   (if (< samples-left 1)
@@ -304,8 +292,8 @@
   (let ((q (first q-p))
         (a:p (second q-p)))
     (let ([score (mcmc-state->score q)])
-      (if (equal? score -inf.0)
-          -inf.0
+      (if (equal? score minus-infinity)
+          minus-infinity
           (+ score (* -0.5 (apply + (map (lambda (x) (expt x 2)) (map rest a:p)))))))))
 
 (define (make-leapfrog-kernel nfqp dt leapfrog-steps)
@@ -416,8 +404,8 @@
 
  (define (log-sum-exp . log-vals)
    (let* ([max-log-val (apply max log-vals)])
-     (if (equal? max-log-val -inf.0)
-         -inf.0
+     (if (equal? max-log-val minus-infinity)
+         minus-infinity
          (+ (log (exact->inexact (sum (map (lambda (val) (exp (- val max-log-val))) log-vals))))
             max-log-val))))
 

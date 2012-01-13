@@ -72,7 +72,7 @@
                                                         (>= val 0)
                                                         (< val n))
                                                    (- (log n))
-                                                   -inf.0)))
+                                                   minus-infinity)))
                                            '();;proposer
                                            (lambda (args) (iota (first args)))
                                            ))
@@ -84,7 +84,7 @@
                                             (b (second args)) )
                                         (if (or (< val a)
                                                 (> val b))
-                                            -inf.0
+                                            minus-infinity
                                             (- (log (- b a))) )))))
 
 (define exponential (make-stateless-xrp 'exponential
@@ -92,7 +92,7 @@
                                           (- (/ (log (random-real)) inv-mean)) )
                                         (lambda (args val) ;; returns density
                                           (if (< val 0)
-                                              -inf.0
+                                              minus-infinity
                                               (let ((inv-mean (first args)))
                                                 (+ (log inv-mean) (- (* inv-mean val))) )))))
 
