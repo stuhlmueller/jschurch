@@ -1,32 +1,43 @@
 <html>
   <head>
     <title>jschurch</title>
-		<script src="md5.js"></script>
     <script src="../compiled/jschurch-all.js"></script>
     <script>
     $(document).ready(function() {
-        $('#churchCompile').click(function() {
-            churchInputSrc = $("#churchSrc").val();
-            evalChurchCode(churchInputSrc, function(s){$("#churchOut").val(s)});
+      $('#churchCompile').click(function() {
+        $(this).attr('disabled', 'disabled');
+        churchInputSrc = $("#churchSrc").val();
+        evalChurchCode(churchInputSrc, function(s) {
+          $("#churchCompile").removeAttr('disabled');
+          $("#churchOut").val(s)
         });
+      });
     });
     </script>
 		<style>
-			textarea {
-				font-family: inconsolata, courier, monospace;
-				font-size: 14px;
-			}
-		</style>
+      body, button {
+        font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", sans-serif;
+        font-weight: 300;
+      }
+      textarea {
+        font-family: inconsolata, courier, monospace;
+        font-size: 13px;
+        border-radius: 4px;
+        border: 1px solid gray;
+      }
+    </style>
   </head>
   <body>
-    <h1>jschurch</h1>
+    <div style='float: left; width: 45%;'>
+      <p>Code:</p>
+      <textarea id="churchSrc" style="width: 100%; height: 80%; display: block">(or (flip) (flip))</textarea>
 
-    <textarea id="churchSrc" style="width: 500px; height: 150px; display: block">(or (flip) (flip))</textarea>
-
-    <input type="submit" id="churchCompile">
-    </input>
-
-    <textarea id="churchOut" style="width: 500px; height: 150px; display: block"></textarea>
-
+      <button type="button" id="churchCompile" style='font-size: 24px;'>Run</button>
+    </div>
+	
+    <div style='float: left; width: 45%; margin-left: 30px'>
+      <p>Result:</p>
+      <textarea id="churchOut" style="width: 100%; height: 80%;"></textarea>
+    </div>
   </body>
 </html>
