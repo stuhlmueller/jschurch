@@ -3400,7 +3400,7 @@ var sc_KEYWORD_PREFIX = "\uEBAD";
 /*** META ((export #t) (arity #t)
            (peephole (id))) */
 function sc_jsstring2string(s) {
-    return s;
+    return '"' + s + '"';
 }
 
 /*** META ((export #t) (arity #t)
