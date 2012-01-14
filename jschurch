@@ -127,6 +127,7 @@ def webservice():
     js_paths = ["external/scheme2js/runtime.js",
                 "compiled/church-compiler.js",
                 "external/jquery-1.7.min.js",
+                "scheme-compilers/javascript/md5.js",                
                 "scheme-compilers/javascript/random/Alea.js",
                 "scheme-compilers/javascript/random/KISS07.js",
                 "scheme-compilers/javascript/random/Kybos.js",
