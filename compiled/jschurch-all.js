@@ -8446,19 +8446,35 @@ function g(x)
     return z;
 }
 
-
+var __codeCache = {};
 var evalChurchCode = function(churchCode, returnValueHandler){
   var churchInputExpr = sc_read(new sc_StringInputPort("(" + churchInputSrc + ")"));
   var schemeExpr = compile(churchInputExpr, null);
   var wrappedSchemeExpr = scheme2jsTemplate.supplant({ churchprogram : String(schemeExpr).slice(1,-1) });
+  
+  var key = hex_md5(wrappedSchemeExpr);
+  
   var url="http://focusedattention.org/scheme2js/scheme2js.php?scheme=" +
     encodeURIComponent(wrappedSchemeExpr) +
     "&callback=?";
-  $.getJSON(url, null, function(compiledCode){
-              // Set output ports
-              SC_DEFAULT_OUT = new sc_GenericOutputPort(returnValueHandler);
-              SC_ERROR_OUT = SC_DEFAULT_OUT;
-              // Run compiled file
-              eval(compiledCode);
-            });
+  
+  // reset symbol-index to 0 so that recompiling the same code results in the same addresses every time
+  BgL_symbolzd2indexzd2=0;
+  
+  console.log(key);
+  if (__codeCache[key]) {
+    console.log("running from cache");
+    eval(__codeCache[key]);
+  } else {
+    console.log("loading from scheme2js server");
+    $.getJSON(url, null, function(compiledCode){
+                __codeCache[key] = compiledCode;
+                // Set output ports
+                SC_DEFAULT_OUT = new sc_GenericOutputPort(returnValueHandler);
+                SC_ERROR_OUT = SC_DEFAULT_OUT;
+                // Run compiled file
+                document.write(compiledCode);
+                eval(compiledCode);
+              });
+    }
 };

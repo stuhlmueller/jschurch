@@ -1,8 +1,9 @@
 <html>
   <head>
     <title>jschurch</title>
-    <script src="../compiled/jschurch-all.js" type="text/javascript"></script>
-    <script type="text/javascript">
+		<script src="md5.js"></script>
+    <script src="../compiled/jschurch-all.js"></script>
+    <script>
     $(document).ready(function() {
         $('#churchCompile').click(function() {
             churchInputSrc = $("#churchSrc").val();
@@ -10,18 +11,22 @@
         });
     });
     </script>
+		<style>
+			textarea {
+				font-family: inconsolata, courier, monospace;
+				font-size: 14px;
+			}
+		</style>
   </head>
   <body>
     <h1>jschurch</h1>
 
-    <textarea id="churchSrc" style="width: 500px; height: 150px; display: block">(or (flip) (flip))
-    </textarea>
+    <textarea id="churchSrc" style="width: 500px; height: 150px; display: block">(or (flip) (flip))</textarea>
 
-    <input type="submit" id="churchCompile" onClick="javascript: ">
+    <input type="submit" id="churchCompile">
     </input>
 
-    <textarea id="churchOut" style="width: 500px; height: 150px; display: block">
-    </textarea>
+    <textarea id="churchOut" style="width: 500px; height: 150px; display: block"></textarea>
 
   </body>
 </html>
