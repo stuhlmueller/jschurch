@@ -29,12 +29,14 @@ var scheme2jsTemplate = ";; Broken placeholder constants\n\
 \n\
 ;; These functions are defined in math-functions.js, but need aliases\n\
 (define sample-gamma sample_gamma)\n\
-(define gamma-pdf gamma_pdf) ;; Why was this an ln version? Score computations are done in ln domain, so need ln-score...\n\
+(define gamma-pdf gamma_pdf)\n\
+(define gamma-lnpdf gamma_lnpdf)\n\
 (define sample-poisson sample_poisson)\n\
 (define sample-binomial sample_binomial)\n\
 (define sample-beta sample_beta)\n\
 (define sample-gaussian sample_gaussian)\n\
-(define gaussian-pdf gaussian_pdf) ;; Why was this an ln version? Score computations are done in ln domain, so need ln-score...\n\
+(define gaussian-pdf gaussian_pdf)\n\
+(define gaussian-lnpdf gaussian_lnpdf)\n\
 (define sample-dirichlet sample_dirichlet)\n\
 (define dirichlet-lnpdf dirichlet_lnpdf)\n\
 (define sample-tdist sample_tdist)\n\
