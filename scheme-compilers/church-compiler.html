@@ -7,9 +7,10 @@
       $('#churchCompile').click(function() {
         $(this).attr('disabled', 'disabled');
         churchInputSrc = $("#churchSrc").val();
+        $("#churchOut").val("");
         evalChurchCode(churchInputSrc, function(s) {
           $("#churchCompile").removeAttr('disabled');
-          $("#churchOut").val(s)
+          $("#churchOut").get(0).value += s;
         });
       });
     });
