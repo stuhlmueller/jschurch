@@ -8473,7 +8473,6 @@ var evalChurchCode = function(churchCode, returnValueHandler){
                 SC_DEFAULT_OUT = new sc_GenericOutputPort(returnValueHandler);
                 SC_ERROR_OUT = SC_DEFAULT_OUT;
                 // Run compiled file
-                document.write(compiledCode);
                 eval(compiledCode);
               });
     }
