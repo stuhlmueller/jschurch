@@ -1,14 +1,14 @@
 var __codeCache = {};
 var evalChurchCode = function(churchCode, returnValueHandler){
+  key = hex_md5(churchCode);
+  
   var churchInputExpr = sc_read(new sc_StringInputPort("(" + churchCode + ")"));
   var schemeExpr = compile(churchInputExpr, null);
   var wrappedSchemeExpr = scheme2jsTemplate.supplant(
     { churchprogram : String(schemeExpr).slice(1,-1) });
   
-  key = hex_md5(wrappedSchemeExpr);
-  
-  // reset symbol-index to 0 so that recompiling the same code results in the same addresses every time
-  BgL_symbolzd2indexzd2=0;
+  // used for caching scheme code
+  //BgL_symbolzd2indexzd2=0;
   
   if (__codeCache[key]) {
     console.log("running from client-side cache");
@@ -19,7 +19,7 @@ var evalChurchCode = function(churchCode, returnValueHandler){
       encodeURIComponent(wrappedSchemeExpr) +
       "&callback=?";
       jQuery.getJSON(url, null, function(compiledCode){
-              __codeCache[key] = compiledCode
+              __codeCache[key] = compiledCode;
               // Set output ports
               SC_DEFAULT_OUT = new sc_GenericOutputPort(returnValueHandler);
               SC_ERROR_OUT = SC_DEFAULT_OUT;
