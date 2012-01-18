@@ -21,7 +21,11 @@ var evalChurchCode = function(churchCode, returnValueHandler){
 
   if (__codeCache[key]) {
     console.log("running from client-side cache");
-    eval(__codeCache[key]);
+    try {
+      eval(__codeCache[key]);
+    } catch (err) {
+      returnValueHandler(err);
+    }
   } else {
     console.log("submitting to scheme2js server");
     var url="http://focusedattention.org/scheme2js/scheme2js.php?scheme=" +
