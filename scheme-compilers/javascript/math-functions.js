@@ -2,6 +2,10 @@
 var random = new MRG32k3a();
 var intRandom = random.uint32;
 
+// Use these functions from the scheme2js runtime.js if available
+var sc_list2vector = (typeof sc_list2vector == "function") ? sc_list2vector : function(x) { return x };
+var sc_vector2list = (typeof sc_vector2list == "function") ? sc_vector2list : function(x) { return x };
+
 function random_integer(n)
 { 
     return intRandom() % n; 
@@ -186,18 +190,22 @@ function gaussian_lnpdf(x,mu,sigma)
 // TODO: handle underflow in normalization
 function sample_dirichlet(alpha)
 {
+    alpha = sc_list2vector(alpha);
     var theta = new Array(alpha.length);
     var sum = 0;
 
     for(i=0; i<alpha.length; i++){ theta[i] = sample_gamma(alpha[i],1); sum += theta[i]; }
     for(i=0; i<alpha.length; i++) theta[i] /= sum;
-
-    return theta;
+    
+    return sc_vector2list(theta);
 }
 
 // Evaluate the logarithm of the Dirichlet distribution
+// FIXME: this is incorrect
 function dirichlet_lnpdf(alpha, theta)
 {
+    alpha = sc_list2vector(alpha);
+    theta = sc_list2vector(theta);
     var logp = 0;
     
     for(i=0; i<alpha.length; i++) logp = (alpha[i] - 1)*Math.log(theta[i]);
@@ -274,6 +282,7 @@ function log_gamma(xx)
 // Calculate the sum of elements in a vector
 function sum(v)
 {
+    v = sc_list2vector(v);
     var sum=0;
     for(i=0;i<v.length;i++) sum += v[i];
     return sum;
@@ -282,17 +291,19 @@ function sum(v)
 // Calculate the mean of elements in a vector
 function mean(v)
 {
-    return sum(v)/v.length;
+    var _v = sc_list2vector(v);
+    return sum(v)/_v.length;
 }
 
 // Normalize a vector
 function normalize(v)
 {
+    v = sc_list2vector(v);
     var s=0;
     for(i=0;i<v.length;i++) s += v[i]*v[i];
     s = Math.sqrt(s);
     for(i=0;i<v.length;i++) v[i] /= s;
-    return v;
+    return sc_vector2list(v);
 }
 
 // Returns log(1 + x) in a numerically stable way
