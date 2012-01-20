@@ -281,19 +281,21 @@ function log_gamma(xx)
 }
 
 // Calculate the sum of elements in a vector
+// N.B.: this doesn't get used in compiled Church->JS code
+// so we don't need to use sc_list2vector / sc_vector2list
 function sum(v)
 {
-    v = sc_list2vector(v);
     var sum=0;
     for(i=0;i<v.length;i++) sum += v[i];
     return sum;
 }
 
 // Calculate the mean of elements in a vector
+// N.B.: this doesn't get used in compiled Church->JS code
+// so we don't need to use sc_list2vector / sc_vector2list
 function mean(v)
 {
-    var _v = sc_list2vector(v);
-    return sum(v)/_v.length;
+    return sum(v)/v.length;
 }
 
 // Normalize a vector
