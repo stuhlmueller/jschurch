@@ -201,15 +201,13 @@ function sample_dirichlet(alpha)
 }
 
 // Evaluate the logarithm of the Dirichlet distribution
-// FIXME: this is incorrect
-function dirichlet_lnpdf(alpha, theta)
+function dirichlet_lnpdf(theta, alpha)
 {
     alpha = sc_list2vector(alpha);
     theta = sc_list2vector(theta);
-    var logp = 0;
+    var logp = log_gamma(sum(alpha));
     
-    for(i=0; i<alpha.length; i++) logp = (alpha[i] - 1)*Math.log(theta[i]);
-    logp += log_gamma(sum(alpha));
+    for(i=0; i<alpha.length; i++) logp += (alpha[i] - 1)*Math.log(theta[i]);
     for(i=0; i<alpha.length; i++) logp -= log_gamma(alpha[i]);
 
     return logp;      
@@ -251,19 +249,22 @@ function sample_generalized_tdist(nu,mu,sigma_squared)
 // Return the log of a sum of exponentials, to minimize under/overflow
 function logsumexp(v)
 {
-    var t=0;
-    var v;
+    v = sc_list2vector(v);
+    var t=0,
+        val;
 
     for(i=0;i<v.length;i++)
     {
-        abs=Math.abs(v[i]);        
+        var abs=Math.abs(v[i]);        
         if(abs>t){ t=abs; val=v[i]; }                          
     }
 
     var sum=0;
-    for(i=0;i<v.length;i++) sum += Math.exp(v[i]-val);
+    for(i=0;i<v.length;i++) {
+      sum += Math.exp(v[i]-val);
+    }
 
-    return Math.log(sum) + v;
+    return Math.log(sum) + val;
 }
 
 // Evaluate the log of gamma(x)
