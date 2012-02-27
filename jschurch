@@ -196,7 +196,7 @@ def run(file):
     libs = ["external/scheme2js/runtime.js",
             "scheme-compilers/javascript/math-functions.js",
             "scheme-compilers/javascript/random/MRG32k3a.js",
-            "scheme-compilers/javascript/random/Mash.js"
+            "scheme-compilers/javascript/random/Mash.js",
             "compiled/church-prog-core.tmp.js"]
     church_prog_filename = rooted("compiled/church-prog.js")
     combine_files([rooted(lib_path) for lib_path in libs],
