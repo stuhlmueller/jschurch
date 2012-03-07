@@ -48,7 +48,14 @@
                                                (first args)
                                                (log (- 1.0 (exp (first args)))) )))))
 
-(define dirichlet (make-stateless-xrp 'dirichlet sample-dirichlet
+(define a-very-small-number 0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001)
+(define (dirichlet-eps pseudos) (let ((draw (sample-dirichlet pseudos)))
+                                  (if (memv 0.0 draw)
+                                      (let ((norm (+ (* (length draw) a-very-small-number) (apply + draw))))
+                                        (map (lambda (x) (/ (+ x a-very-small-number) norm)) draw))
+                                      draw)))
+
+(define dirichlet (make-stateless-xrp 'dirichlet dirichlet-eps
                                       (lambda (args val)
                                         (dirichlet-lnpdf (first args) val))
                                       ))
