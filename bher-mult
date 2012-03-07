@@ -141,7 +141,7 @@ Examples:
 
     vprint("compiling church->scheme", verbose)
     call(("cd '%(bher_path)s' && vicare %(debug)s --r6rs-script '%(compiler)s' " +
-          "'%(file)s.template' '%(out_path)s.template' '%(ext)s' %(pretty)s") % settings, verbose)
+          "'%(in_path)s.template' '%(out_path)s.template' '%(ext)s' %(pretty)s") % settings, verbose)
           
     # prepare to splice in the compiled code
     settings["churchprogram"] = open('%(out_path)s.template' % settings).read()
