@@ -9,6 +9,7 @@
                  gensym
                  readable-gensym
                  pretty-print
+                 gensym->symbol
                  )
          
          (import (scheme-tools srfi-compat :1)
@@ -40,5 +41,8 @@
 
          (define (readable-gensym)
            (string->symbol (with-output-to-string (lambda () (display (gensym))))))
+
+         (define (gensym->symbol g)
+           (string->symbol (with-output-to-string (lambda () (display g))))) 
          
          )

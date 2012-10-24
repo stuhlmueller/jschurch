@@ -40,6 +40,7 @@
 	       inexact->exact) ;;this isn't really needed.
          (gensym scheme-gensym))
 
+ (church longs-readable-scheme)
  ;(church readable-scheme)
 
  ;(church trie)
