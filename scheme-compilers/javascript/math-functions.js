@@ -138,7 +138,7 @@ function binomial_pdf(k, p, n)
 
     var invsd = Math.sqrt(z);
     z = d2 * invsd;
-    z = gaussian_lnpdf(z, 0, 1) + Math.log(invsd);
+    z = gaussian_pdf(z, 0, 1) * invsd;
 
     return z;
 }
