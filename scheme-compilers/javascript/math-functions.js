@@ -84,7 +84,7 @@ function gamma_pdf(x,a,b)
 // Evaluate log gammma pdf
 function gamma_lnpdf(x,a,b)
 {
-    return (1 - a)*Math.log(x) - x/b - log_gamma(a) - a*Math.log(b);
+    return (a - 1)*Math.log(x) - x/b - log_gamma(a) - a*Math.log(b);
 }
 
 // Draw a sample from a Binomial distribution
@@ -136,8 +136,9 @@ function binomial_pdf(k, p, n)
     var den = (n + inv6) * p * q;
     var z = num / den;
 
-    z = d2 * Math.sqrt(z);
-    z = normal_cdf(z);
+    var invsd = Math.sqrt(z);
+    z = d2 * invsd;
+    z = gaussian_lnpdf(z, 0, 1) + Math.log(invsd);
 
     return z;
 }
