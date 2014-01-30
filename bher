@@ -87,6 +87,7 @@ Examples:
     settings = {
         "bher_path" : bher_path,
         "in_path" : abspath(file),
+        "in_dir" : os.path.dirname(os.path.realpath(file)),
         ##"header_path" : abspath(os.path.join(bher_path, compilers[compiler]["header"])),
         ##"trailer_path" : abspath(os.path.join(bher_path, compilers[compiler]["trailer"])),
         "template_path" : abspath(os.path.join(bher_path, compilers[compiler]["template"])),
@@ -118,6 +119,9 @@ Examples:
         else:
             call("cp '%(in_path)s' '%(in_path)s.tmp'" % settings, verbose)
 
+        vprint("make a symlink to directory of model file", verbose)
+        call("rm %(bher_path)s/symlink-include && ln -s %(in_dir)s %(bher_path)s/symlink-include" % settings, verbose)
+        
         vprint("compiling church->scheme", verbose)
         call(("cd '%(bher_path)s' && vicare %(debug)s --r6rs-script '%(compiler)s' " +
               "'%(in_path)s.tmp' '%(out_path)s.tmp' '%(ext)s' %(pretty)s") % settings, verbose)

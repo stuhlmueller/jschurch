@@ -10,7 +10,9 @@
 
  (import (rnrs)
          (church readable-scheme)
-         (scheme-tools srfi-compat :1))
+         (scheme-tools srfi-compat :1)
+         (xitomatl file-system base compat)
+         )
  
 ;;;some syntax utils
  (define (mem? sexpr) (tagged-list? sexpr 'mem))
@@ -25,7 +27,8 @@
  (define (letrec? exp) (tagged-list? exp 'letrec))
 
 ;;;include paths
- (define include-paths  (list "./" "include/" "./church/")) ;;FIXME: include scheme search-path?
+ (define include-paths  (list "./symlink-include/" "./" "include/" "./church/")) ;;FIXME: include scheme search-path?
+ 
  ;;(append (list "./" "include/") (map (lambda (search-path) (string-append search-path "/include/")) (search-paths))))
 
                                         ; goes through a list of library paths and opens
