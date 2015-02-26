@@ -1,3 +1,7 @@
+# JSChurch
+
+*JSChurch is deprecated. If you are looking to write probabilistic programs in Scheme syntax, [webchurch](github.com/probmods/webchurch) is your best bet. You can use it online at [probmods.org](probmods.org), or on your computer via nodejs. If you are not tied to Scheme syntax, then I recommend [webppl](github.com/probmods/webppl), our most recent probabilistic programming language. You can use it online at [dippl.org](dippl.org), or via nodejs as well. webppl is significantly faster than previous implementations, and additionally supports particle filtering and best-first enumeration inference strategies.*
+
 # Instructions
 
 - `jschurch make` builds the Church compiler in Javascript.
